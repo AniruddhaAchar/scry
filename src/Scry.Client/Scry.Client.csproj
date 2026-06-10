@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- scry — the short-lived CLI an agent invokes per command. Connects to (or,
+       from M1, spawns) the scryd host for a dump, issues one RPC, prints JSON. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>scry</AssemblyName>
+    <RootNamespace>Scry.Client</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Grpc.Net.Client" />
+    <PackageReference Include="System.CommandLine" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Scry.Contracts\Scry.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>

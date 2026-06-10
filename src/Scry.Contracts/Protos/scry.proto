@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package scry.v1;
+
+option csharp_namespace = "Scry.Contracts.V1";
+
+// The Scry analysis service. A scryd host serves exactly one loaded dump.
+//
+// M0 (skeleton) implements only Health and Shutdown — no ClrMD yet. The
+// analysis RPCs (DumpHeap, DumpObject, ClrThreads, ...) are added in later
+// milestones; see the v0.0.1 handoff §8/§10 for their shapes.
+service Scry {
+  // Liveness/readiness probe. Cheap; safe to poll while a host warms up.
+  rpc Health(HealthRequest) returns (HealthResponse);
+
+  // Ask the host to dispose the runtime, release the dump file, and exit.
+  rpc Shutdown(ShutdownRequest) returns (ShutdownResponse);
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+  enum State {
+    LOADING = 0;  // dump load / DAC resolution in progress
+    READY = 1;    // runtime open, accepting analysis commands
+    FAILED = 2;   // load failed; detail explains why
+  }
+  State state = 1;
+  string runtime_version = 2;  // CLR version once loaded; empty in M0
+  string detail = 3;           // human/agent-readable status or error context
+}
+
+message ShutdownRequest {}
+
+message ShutdownResponse {}

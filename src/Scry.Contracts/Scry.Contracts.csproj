@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Shared gRPC contract (proto -> C# for both client and server) plus the
+       endpoint-naming helper used by scry and scryd to find each other. -->
+
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf" />
+    <PackageReference Include="Grpc.Core.Api" />
+    <PackageReference Include="Grpc.Tools" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Protobuf Include="Protos\scry.proto" GrpcServices="Both" />
+  </ItemGroup>
+
+</Project>

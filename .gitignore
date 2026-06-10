@@ -1,0 +1,35 @@
+# .NET build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+publish/
+
+# Rider / VS / VS Code
+.vs/
+.idea/
+*.user
+*.suo
+*.userprefs
+
+# Test results
+[Tt]est[Rr]esult*/
+*.trx
+*.coverage
+coverage/
+
+# NuGet
+*.nupkg
+.nuget/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local dumps / scratch (never commit memory dumps — they contain secrets)
+*.dmp
+*.dump
+scratch/
+
+# NOTE: packages.lock.json and global.json ARE committed (intentionally not ignored).

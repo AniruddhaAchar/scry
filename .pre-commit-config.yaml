@@ -1,0 +1,26 @@
+# Pre-commit hooks for scry, managed with prek (a fast pre-commit runner).
+#
+#   Install prek:   https://github.com/j178/prek   (e.g. `uv tool install prek`)
+#   Wire the hook:  prek install
+#   Run manually:   prek run --all-files
+#
+# Hooks run only when C# files are part of the commit. Both are repo-local: they
+# invoke the .NET SDK directly rather than pulling a hosted hook repo.
+minimum_pre_commit_version: "3.0.0"
+
+repos:
+  - repo: local
+    hooks:
+      - id: dotnet-format
+        name: dotnet format (verify-no-changes)
+        entry: dotnet format scry.slnx --verify-no-changes
+        language: system
+        types_or: [c#]
+        pass_filenames: false
+
+      - id: dotnet-test-unit
+        name: dotnet test (Category=Unit)
+        entry: dotnet test scry.slnx --filter Category=Unit --nologo
+        language: system
+        types_or: [c#]
+        pass_filenames: false
