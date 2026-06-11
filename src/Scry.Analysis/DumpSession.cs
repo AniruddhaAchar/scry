@@ -10,6 +10,7 @@ namespace Scry.Analysis;
 public sealed class DumpSession : IDisposable
 {
     private DataTarget? _dataTarget;
+    private HeapSnapshot? _heap;
 
     public ClrRuntime Runtime { get; private set; } = null!;
     public string RuntimeVersion { get; private set; } = string.Empty;
@@ -39,6 +40,12 @@ public sealed class DumpSession : IDisposable
             throw;
         }
     }
+
+    /// <summary>
+    /// The heap snapshot for this dump, built on first use and memoized (dumps are immutable).
+    /// Must be called on the analysis thread. A cancelled build is discarded (not memoized).
+    /// </summary>
+    public HeapSnapshot GetHeap(CancellationToken ct) => _heap ??= HeapSnapshot.Build(Runtime, ct);
 
     public void Dispose()
     {

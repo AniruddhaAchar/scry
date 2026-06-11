@@ -182,6 +182,81 @@ stackCommand.SetAction(async (parseResult, ct) =>
 });
 #endregion
 
+#region dumpheap
+var dumpheapHandleArg = new Argument<string?>("handle") { Description = "Session handle (optional).", Arity = ArgumentArity.ZeroOrOne };
+var dumpheapHandleOption = new Option<string?>("--handle") { Description = "Explicit session handle." };
+var dumpheapTypeOption = new Option<string?>("--type") { Description = "Case-sensitive substring filter on the full type name." };
+var dumpheapStatOption = new Option<bool>("--stat") { Description = "Force per-type statistics (default when no --type)." };
+var dumpheapLimitOption = new Option<int>("--limit") { Description = "Max objects per listing page.", DefaultValueFactory = _ => 1000 };
+var dumpheapOffsetOption = new Option<int>("--offset") { Description = "Object-listing page offset.", DefaultValueFactory = _ => 0 };
+var dumpheapTimeoutOption = new Option<int>("--timeout") { Description = "RPC timeout in seconds (0 = none). The first heap command warms a snapshot.", DefaultValueFactory = _ => 30 };
+var dumpheapCommand = new Command("dumpheap", "Heap statistics, or a paged object listing with --type.");
+dumpheapCommand.Arguments.Add(dumpheapHandleArg);
+dumpheapCommand.Options.Add(dumpheapHandleOption);
+dumpheapCommand.Options.Add(dumpheapTypeOption);
+dumpheapCommand.Options.Add(dumpheapStatOption);
+dumpheapCommand.Options.Add(dumpheapLimitOption);
+dumpheapCommand.Options.Add(dumpheapOffsetOption);
+dumpheapCommand.Options.Add(dumpheapTimeoutOption);
+dumpheapCommand.SetAction(async (parseResult, ct) =>
+{
+    await using var sp = Bootstrap.Build(parseResult.GetValue(verboseOption));
+    var handle = parseResult.GetValue(dumpheapHandleArg) ?? parseResult.GetValue(dumpheapHandleOption);
+    return await sp.GetRequiredService<ScryCommands>().DumpHeapAsync(
+        handle,
+        parseResult.GetValue(dumpheapTypeOption),
+        parseResult.GetValue(dumpheapStatOption),
+        parseResult.GetValue(dumpheapLimitOption),
+        parseResult.GetValue(dumpheapOffsetOption),
+        parseResult.GetValue(dumpheapTimeoutOption),
+        ct);
+});
+#endregion
+
+#region dumpexceptions
+var dumpexHandleArg = new Argument<string?>("handle") { Description = "Session handle (optional).", Arity = ArgumentArity.ZeroOrOne };
+var dumpexHandleOption = new Option<string?>("--handle") { Description = "Explicit session handle." };
+var dumpexLimitOption = new Option<int>("--limit") { Description = "Max exceptions per page.", DefaultValueFactory = _ => 1000 };
+var dumpexOffsetOption = new Option<int>("--offset") { Description = "Page offset.", DefaultValueFactory = _ => 0 };
+var dumpexTimeoutOption = new Option<int>("--timeout") { Description = "RPC timeout in seconds (0 = none).", DefaultValueFactory = _ => 30 };
+var dumpexCommand = new Command("dumpexceptions", "List live exceptions on the heap (address, type, message, HResult, inner chain).");
+dumpexCommand.Arguments.Add(dumpexHandleArg);
+dumpexCommand.Options.Add(dumpexHandleOption);
+dumpexCommand.Options.Add(dumpexLimitOption);
+dumpexCommand.Options.Add(dumpexOffsetOption);
+dumpexCommand.Options.Add(dumpexTimeoutOption);
+dumpexCommand.SetAction(async (parseResult, ct) =>
+{
+    await using var sp = Bootstrap.Build(parseResult.GetValue(verboseOption));
+    var handle = parseResult.GetValue(dumpexHandleArg) ?? parseResult.GetValue(dumpexHandleOption);
+    return await sp.GetRequiredService<ScryCommands>().DumpExceptionsAsync(
+        handle,
+        parseResult.GetValue(dumpexLimitOption),
+        parseResult.GetValue(dumpexOffsetOption),
+        parseResult.GetValue(dumpexTimeoutOption),
+        ct);
+});
+#endregion
+
+#region printexception
+var peHandleOption = new Option<string?>("--handle") { Description = "Explicit session handle." };
+var peAddressOption = new Option<string?>("--address") { Description = "Exception object address (hex, e.g. 0x7ff...)." };
+var peTimeoutOption = new Option<int>("--timeout") { Description = "RPC timeout in seconds (0 = none).", DefaultValueFactory = _ => 10 };
+var peCommand = new Command("printexception", "Full detail for one exception by address, including its stack trace.");
+peCommand.Options.Add(peHandleOption);
+peCommand.Options.Add(peAddressOption);
+peCommand.Options.Add(peTimeoutOption);
+peCommand.SetAction(async (parseResult, ct) =>
+{
+    await using var sp = Bootstrap.Build(parseResult.GetValue(verboseOption));
+    return await sp.GetRequiredService<ScryCommands>().PrintExceptionAsync(
+        parseResult.GetValue(peHandleOption),
+        parseResult.GetValue(peAddressOption),
+        parseResult.GetValue(peTimeoutOption),
+        ct);
+});
+#endregion
+
 #region root
 
 var root = new RootCommand("scry — structured .NET dump analysis for AI agents.");
@@ -190,6 +265,9 @@ root.Subcommands.Add(analyzeCommand);
 root.Subcommands.Add(psCommand);
 root.Subcommands.Add(healthCommand);
 root.Subcommands.Add(stackCommand);
+root.Subcommands.Add(dumpheapCommand);
+root.Subcommands.Add(dumpexCommand);
+root.Subcommands.Add(peCommand);
 root.Subcommands.Add(stopCommand);
 root.Subcommands.Add(killCommand);
 

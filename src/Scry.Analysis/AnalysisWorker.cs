@@ -69,7 +69,7 @@ public sealed class AnalysisWorker : IDisposable
             try
             {
                 var session = _session ?? throw new InvalidOperationException("runtime not loaded");
-                tcs.SetResult(command.Execute(session.Runtime, ct));
+                tcs.SetResult(command.Execute(session, ct));
             }
             catch (Exception ex)
             {

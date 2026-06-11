@@ -18,6 +18,15 @@ service Scry {
 
   // Walk managed thread stacks. thread_os_id == 0 (or all_threads) → every thread.
   rpc ClrStack(ClrStackRequest) returns (ClrStackResponse);
+
+  // Heap statistics or a paged object listing (type_filter = case-sensitive substring; empty = all).
+  rpc DumpHeap(DumpHeapRequest) returns (DumpHeapResponse);
+
+  // Live exceptions on the heap (paged): address, type, message, HResult, inner chain.
+  rpc DumpExceptions(DumpExceptionsRequest) returns (DumpExceptionsResponse);
+
+  // Full detail for one exception object by address, including its reconstructed stack trace.
+  rpc PrintException(PrintExceptionRequest) returns (PrintExceptionResponse);
 }
 
 message HealthRequest {}
@@ -60,4 +69,38 @@ message StackFrame {
   string method = 4;
   string type = 5;
   string module = 6;
+}
+
+message DumpHeapRequest {
+  string type_filter = 1;   // case-sensitive substring; empty = all types
+  bool   stat = 2;          // true → per-type stats; false → object listing
+  int32  limit = 3;         // object-listing page cap (<=0 → server default 1000)
+  int32  offset = 4;
+}
+
+message DumpHeapResponse {
+  repeated HeapTypeStat stats = 1;   // populated when stat=true
+  repeated HeapObject objects = 2;   // populated when stat=false
+  int64  total_matches = 3;          // object listing: total matched (pre-paging)
+  bool   truncated = 4;
+}
+
+message HeapTypeStat { string type = 1; uint64 method_table = 2; int64 count = 3; uint64 total_size = 4; }
+
+message HeapObject { uint64 address = 1; string type = 2; uint64 size = 3; }
+
+message DumpExceptionsRequest { int32 limit = 1; int32 offset = 2; }
+
+message DumpExceptionsResponse { repeated ExceptionInfo exceptions = 1; int64 total_matches = 2; bool truncated = 3; }
+
+message ExceptionInfo { uint64 address = 1; string type = 2; string message = 3; int32 hresult = 4; repeated ExceptionLink inner = 5; }
+
+message ExceptionLink { string type = 1; string message = 2; }
+
+message PrintExceptionRequest { uint64 address = 1; }
+
+message PrintExceptionResponse {
+  bool found = 1;
+  ExceptionInfo exception = 2;
+  repeated StackFrame stack_trace = 3;   // reuses the existing StackFrame message
 }

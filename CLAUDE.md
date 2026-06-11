@@ -109,8 +109,9 @@ src/Scry.Contracts/
 - **M1b — dump loading + analysis engine (done):** `DataTarget.LoadDump`, DAC resolution,
   single-threaded `AnalysisWorker` in dedicated `Scry.Analysis` library, readiness reporting
   with runtime version. See [ADR 0006](docs/adr/0006-analysis-engine.md).
-- **M2 — first analysis commands (in progress):** `ClrStack` (walk managed thread stacks), then
-  `DumpObject`, `ClrThreads`, `DumpStackObjects`.
-- **M3 — heap walks:** `DumpHeap`, `DumpExceptions`, `PrintException` (pagination + cancellation).
+- **M2 — first analysis commands (done):** `ClrStack` (walk managed thread stacks).
+- **M3 — heap walks (done):** `DumpHeap` (stats + paged object listing), `DumpExceptions`
+  (paged exception addresses + type/message), `PrintException` (detail + stack trace).
+  Immutable `HeapSnapshot` cache built once on analysis thread, served DAC-free for stats/paging.
 - **M4 — collections:** `DumpConcurrentDictionary`, `DumpConcurrentQueue`.
 - **M5 — hardening:** error-model polish, limit caps, per-RID release CI.

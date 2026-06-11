@@ -9,8 +9,9 @@ namespace Scry.Analysis.Commands;
 /// </summary>
 public sealed class ClrStackCommand(uint? threadOsId) : IAnalysisCommand<IReadOnlyList<ThreadStack>>
 {
-    public IReadOnlyList<ThreadStack> Execute(ClrRuntime runtime, CancellationToken ct)
+    public IReadOnlyList<ThreadStack> Execute(DumpSession session, CancellationToken ct)
     {
+        var runtime = session.Runtime;
         var threads = new List<ThreadStack>();
 
         foreach (var thread in runtime.Threads)

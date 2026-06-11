@@ -88,6 +88,124 @@ scry stack --thread 1234
 Each frame includes: kind (e.g. `ManagedMethod`), instruction pointer, stack pointer, managed
 method name, declaring type, and containing module.
 
+## Heap queries
+
+Heap queries build a one-time immutable snapshot of the managed heap on first use, then serve
+subsequent queries (statistics, paging, exception lookup) without touching ClrMD. The snapshot
+is fast and reusable for the lifetime of the session.
+
+### Heap statistics
+
+```bash
+scry dumpheap
+```
+
+```json
+{
+  "stats": [
+    {
+      "type": "System.String",
+      "methodTable": "0x7f9a12345678",
+      "count": 1250,
+      "totalSize": 45000
+    },
+    {
+      "type": "System.Object[]",
+      "methodTable": "0x7f9a87654321",
+      "count": 320,
+      "totalSize": 32000
+    }
+  ]
+}
+```
+
+Each entry shows the type name, method table address, object count, and total size in bytes.
+Entries are sorted by `totalSize` descending.
+
+### Objects of a specific type (paged)
+
+```bash
+scry dumpheap --type System.String --limit 10
+```
+
+```json
+{
+  "objects": [
+    {
+      "address": "0x7f9a00001234",
+      "type": "System.String",
+      "size": 36
+    },
+    {
+      "address": "0x7f9a00005678",
+      "type": "System.String",
+      "size": 45
+    }
+  ],
+  "totalMatches": 1250,
+  "truncated": true
+}
+```
+
+The `totalMatches` field shows how many objects match the filter before paging; `truncated`
+indicates whether there are more results. Use `--offset` to walk pages.
+
+### Live exceptions
+
+```bash
+scry dumpexceptions
+```
+
+```json
+{
+  "exceptions": [
+    {
+      "address": "0x7f9a0000abcd",
+      "type": "System.InvalidOperationException",
+      "message": "Object reference not set to an instance of an object.",
+      "hresult": -2146233088,
+      "inner": []
+    }
+  ],
+  "totalMatches": 1,
+  "truncated": false
+}
+```
+
+Each exception lists its address, type, message, HResult, and any inner exception chain.
+
+### Exception detail with stack trace
+
+```bash
+scry printexception --address 0x7f9a0000abcd
+```
+
+```json
+{
+  "found": true,
+  "exception": {
+    "address": "0x7f9a0000abcd",
+    "type": "System.InvalidOperationException",
+    "message": "Object reference not set to an instance of an object.",
+    "hresult": -2146233088,
+    "inner": []
+  },
+  "stackTrace": [
+    {
+      "kind": "ManagedMethod",
+      "instructionPointer": "0x7f9a00123456",
+      "stackPointer": "0x1000",
+      "method": "Main",
+      "type": "Program",
+      "module": "app.dll"
+    }
+  ]
+}
+```
+
+The stack trace captures the reconstructed managed call stack at the point where the exception
+was thrown.
+
 ## Session management
 
 ```bash
@@ -105,4 +223,4 @@ scry kill
 ```
 
 All commands default to the single active session. Explicitly target a session with `--handle`
-or `--dump`. |
+or `--dump`.

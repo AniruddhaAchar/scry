@@ -4,9 +4,9 @@ A [ClrMD](https://github.com/microsoft/clrmd)-based .NET memory-dump analyzer **
 returns **structured JSON**, not human-readable SOS text, so an agent can chain analysis steps
 (`stat` → list of a type → dump an object → walk roots) without scraping a debugger's console.
 
-> **Status: v0.0.1, milestone M1 (session model + logging).** The session model (`analyze`/`ps`/
-> `health`/`stop`/`kill`), auto-spawn, discovery, and file logging are in place. ClrMD dump loading
-> and analysis commands land in M1b+. See [the roadmap](CLAUDE.md#milestones).
+> **Status: v0.0.1, milestone M3 (heap walks).** The session model (`analyze`/`ps`/`health`/
+> `stop`/`kill`), auto-spawn, logging, dump loading, managed thread stacks (`stack`), and heap
+> analysis (`dumpheap`, `dumpexceptions`, `printexception`) are in place. See [the roadmap](CLAUDE.md#milestones).
 
 ## How it works
 
@@ -62,6 +62,12 @@ $SCRY stack
 
 # Walk a single thread (by OS id):
 $SCRY stack --thread 1234
+
+# Heap queries (the first heap command warms a one-time in-memory snapshot):
+$SCRY dumpheap                          # heap statistics
+$SCRY dumpheap --type System.String     # objects of a type, paged
+$SCRY dumpexceptions                    # live exceptions
+$SCRY printexception --address 0xabc123 # detail for one exception
 
 # Query health (no --dump needed — defaults to single active session):
 $SCRY health

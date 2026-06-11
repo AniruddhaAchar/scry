@@ -1,4 +1,3 @@
-using Microsoft.Diagnostics.Runtime;
 using Scry.Analysis;
 using Xunit;
 
@@ -9,7 +8,7 @@ public sealed class AnalysisWorkerTests
 {
     private sealed class NoopCommand : IAnalysisCommand<int>
     {
-        public int Execute(ClrRuntime runtime, CancellationToken ct) => 0;
+        public int Execute(DumpSession session, CancellationToken ct) => 0;
     }
 
     [Fact]

@@ -84,6 +84,23 @@ A `DumpSession` is considered `READY` only after:
 Until then, the session stays in `LOADING` state. Once `READY`, `HealthResponse.RuntimeVersion`
 is populated with the CLR version string.
 
+### Immutable heap snapshot cache (M3)
+
+In M3, heap analysis commands build an immutable `HeapSnapshot` once on the analysis thread
+and serve all subsequent heap queries (statistics, paging, exception lookup) from it without
+touching ClrMD. This is safe and efficient because:
+
+- The snapshot is built once by the single-threaded `AnalysisWorker`, ensuring DAC safety.
+- All query methods (`Stat`, `Objects`, `ExceptionAddresses`) are pure (no ClrMD calls),
+  so they are reentrant and fast.
+- Statistics and paging queries are served directly from the snapshot.
+- Per-exception detail and stack traces (`PrintException`) read ClrMD on demand, using the
+  snapshot's address list for fast lookup.
+
+The snapshot holds parallel arrays: type names (interned in a small table), addresses, type
+indices, sizes, and exception positions. This compact representation keeps millions of objects
+efficient in memory.
+
 ## Consequences
 
 - **ClrMD safety:** The single-threaded `AnalysisWorker` prevents data races and DAC corruption.
@@ -95,3 +112,5 @@ is populated with the CLR version string.
   machine as the dump. Cross-machine analysis is deferred to a later milestone.
 - **Extensibility:** New analysis commands are added by implementing `IAnalysisCommand<T>`;
   they automatically inherit the thread-safety and DAC affinity guarantees.
+- **Heap query performance:** The immutable snapshot makes heap statistics, paging, and
+  exception filtering fast and repeatable, suitable for agent-driven iterative analysis.

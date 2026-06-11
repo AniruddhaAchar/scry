@@ -290,6 +290,189 @@ internal sealed class ScryCommands(ILogger<ScryCommands> logger)
     }
 
     // -------------------------------------------------------------------------
+    // dumpheap
+    // -------------------------------------------------------------------------
+
+    public async Task<int> DumpHeapAsync(
+        string? handle, string? type, bool stat, int limit, int offset, int timeoutSeconds, CancellationToken ct)
+    {
+        var resolveResult = ResolveTarget(handle, dumpPath: null);
+        if (resolveResult.Error is not null)
+        {
+            return JsonOut.WriteError(resolveResult.Error);
+        }
+
+        var target = resolveResult.Handle!;
+        var listObjects = !stat && !string.IsNullOrEmpty(type);
+        logger.LogInformation("dumpheap: handle={Handle} type={Type} stat={Stat}", target, type, stat);
+
+        try
+        {
+            using var channel = ScryChannel.ForEndpoint(target);
+            var client = new ScryGrpc.ScryClient(channel);
+            using var cts = LinkTimeout(ct, timeoutSeconds);
+            var request = new DumpHeapRequest
+            {
+                TypeFilter = type ?? string.Empty,
+                Stat = stat || string.IsNullOrEmpty(type),
+                Limit = limit,
+                Offset = offset,
+            };
+            var response = await client.DumpHeapAsync(request, cancellationToken: cts.Token);
+
+            if (listObjects)
+            {
+                JsonOut.Write(new
+                {
+                    handle = target,
+                    totalMatches = response.TotalMatches,
+                    truncated = response.Truncated,
+                    offset,
+                    limit,
+                    objects = response.Objects.Select(o => new
+                    {
+                        address = $"0x{o.Address:x}",
+                        type = o.Type,
+                        size = o.Size,
+                    }).ToArray(),
+                });
+            }
+            else
+            {
+                JsonOut.Write(new
+                {
+                    handle = target,
+                    stats = response.Stats.Select(s => new
+                    {
+                        type = s.Type,
+                        methodTable = $"0x{s.MethodTable:x}",
+                        count = s.Count,
+                        totalSize = s.TotalSize,
+                    }).ToArray(),
+                });
+            }
+
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "dumpheap RPC failed for {Handle}", target);
+            return JsonOut.WriteError(ConnectError(ex, target));
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // dumpexceptions
+    // -------------------------------------------------------------------------
+
+    public async Task<int> DumpExceptionsAsync(
+        string? handle, int limit, int offset, int timeoutSeconds, CancellationToken ct)
+    {
+        var resolveResult = ResolveTarget(handle, dumpPath: null);
+        if (resolveResult.Error is not null)
+        {
+            return JsonOut.WriteError(resolveResult.Error);
+        }
+
+        var target = resolveResult.Handle!;
+        logger.LogInformation("dumpexceptions: handle={Handle}", target);
+
+        try
+        {
+            using var channel = ScryChannel.ForEndpoint(target);
+            var client = new ScryGrpc.ScryClient(channel);
+            using var cts = LinkTimeout(ct, timeoutSeconds);
+            var response = await client.DumpExceptionsAsync(
+                new DumpExceptionsRequest { Limit = limit, Offset = offset }, cancellationToken: cts.Token);
+
+            JsonOut.Write(new
+            {
+                handle = target,
+                totalMatches = response.TotalMatches,
+                truncated = response.Truncated,
+                offset,
+                limit,
+                exceptions = response.Exceptions.Select(MapException).ToArray(),
+            });
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "dumpexceptions RPC failed for {Handle}", target);
+            return JsonOut.WriteError(ConnectError(ex, target));
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // printexception
+    // -------------------------------------------------------------------------
+
+    public async Task<int> PrintExceptionAsync(
+        string? handle, string? addressText, int timeoutSeconds, CancellationToken ct)
+    {
+        if (!TryParseAddress(addressText, out var address))
+        {
+            return JsonOut.WriteError(new CliError(
+                "INVALID_ARGUMENT", $"--address is required; could not parse '{addressText}' (expected hex, e.g. 0x7ff...)"));
+        }
+
+        var resolveResult = ResolveTarget(handle, dumpPath: null);
+        if (resolveResult.Error is not null)
+        {
+            return JsonOut.WriteError(resolveResult.Error);
+        }
+
+        var target = resolveResult.Handle!;
+        logger.LogInformation("printexception: handle={Handle} address=0x{Address:x}", target, address);
+
+        try
+        {
+            using var channel = ScryChannel.ForEndpoint(target);
+            var client = new ScryGrpc.ScryClient(channel);
+            using var cts = LinkTimeout(ct, timeoutSeconds);
+            var response = await client.PrintExceptionAsync(
+                new PrintExceptionRequest { Address = address }, cancellationToken: cts.Token);
+
+            if (!response.Found)
+            {
+                JsonOut.Write(new { handle = target, address = $"0x{address:x}", found = false });
+                return 0;
+            }
+
+            var e = response.Exception;
+            JsonOut.Write(new
+            {
+                handle = target,
+                found = true,
+                address = $"0x{e.Address:x}",
+                type = e.Type,
+                message = string.IsNullOrEmpty(e.Message) ? null : e.Message,
+                hResult = $"0x{(uint)e.Hresult:x8}",
+                inner = e.Inner.Select(l => new
+                {
+                    type = l.Type,
+                    message = string.IsNullOrEmpty(l.Message) ? null : l.Message,
+                }).ToArray(),
+                stackTrace = response.StackTrace.Select(f => new
+                {
+                    kind = f.Kind,
+                    ip = $"0x{f.InstructionPointer:x}",
+                    sp = $"0x{f.StackPointer:x}",
+                    method = string.IsNullOrEmpty(f.Method) ? null : f.Method,
+                    type = string.IsNullOrEmpty(f.Type) ? null : f.Type,
+                    module = string.IsNullOrEmpty(f.Module) ? null : f.Module,
+                }).ToArray(),
+            });
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "printexception RPC failed for {Handle}", target);
+            return JsonOut.WriteError(ConnectError(ex, target));
+        }
+    }
+
+    // -------------------------------------------------------------------------
     // stop
     // -------------------------------------------------------------------------
 
@@ -495,4 +678,35 @@ internal sealed class ScryCommands(ILogger<ScryCommands> logger)
     private static bool IsTransportFailure(RpcException rpc) =>
         rpc.StatusCode is StatusCode.Unavailable ||
         rpc.Status.DebugException is HttpRequestException or IOException or SocketException or TimeoutException;
+
+    private static object MapException(ExceptionInfo e) => new
+    {
+        address = $"0x{e.Address:x}",
+        type = e.Type,
+        message = string.IsNullOrEmpty(e.Message) ? null : e.Message,
+        hResult = $"0x{(uint)e.Hresult:x8}",
+        inner = e.Inner.Select(l => new
+        {
+            type = l.Type,
+            message = string.IsNullOrEmpty(l.Message) ? null : l.Message,
+        }).ToArray(),
+    };
+
+    private static bool TryParseAddress(string? text, out ulong address)
+    {
+        address = 0;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        var s = text.Trim();
+        if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+        {
+            s = s[2..];
+        }
+
+        return ulong.TryParse(
+            s, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out address);
+    }
 }
