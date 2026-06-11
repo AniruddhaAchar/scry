@@ -42,11 +42,18 @@ dotnet build scry.slnx
 dotnet test  scry.slnx --filter Category=Unit       # fast, dump-free unit tests
 dotnet format scry.slnx --verify-no-changes         # what the pre-commit hook enforces
 
-# End-to-end (M0): start a host, then talk to it. The dump path need not exist yet in M0 —
-# it is only used to derive the endpoint.
-scryd --dump <path> [--idle-timeout <minutes>]      # in one terminal
-scry health   --dump <path>
-scry shutdown --dump <path>
+# End-to-end (M1 session model): spawn a host, query it, stop it.
+# SCRYD_PATH lets the client find scryd when the two binaries are in separate build dirs.
+export SCRYD_PATH=/path/to/scryd[.exe]
+scry analyze [-v] <path/to/dump>   # spawns scryd, waits for READY, prints handle
+scry ps                            # list live sessions
+scry health                        # health of the single active session
+scry stop                          # graceful shutdown (force-kill fallback)
+scry kill                          # force-kill
+
+# health/stop/kill accept an explicit handle or --dump to target a specific session:
+scry health --handle scry-<hex>
+scry health --dump <path>
 ```
 
 ## Conventions
@@ -72,13 +79,35 @@ scry shutdown --dump <path>
 4. **Dumps contain secrets** (connection strings, tokens, PII). Endpoint access is scoped by
    filesystem permissions — see [ADR 0002](docs/adr/0002-grpc-over-uds-and-named-pipes.md).
 
+## Logging & config
+
+Both binaries write a per-process log file to `~/.scry/logs/` (configurable via
+`~/.scry/scry.config.json`). The `-v`/`--verbose` flag forces `Debug` level. On `scry analyze -v`,
+the `-v` is forwarded to the spawned `scryd`. Stdout always stays pure JSON — logs go to the file
+only. See [ADR 0005](docs/adr/0005-configuration-and-logging.md).
+
+## Layout additions (M1 session model)
+
+```
+src/
+  Scry.Core/          Shared config, logging, and path helpers (Scry.Client + Scry.Host both ref this)
+    ScryPaths.cs      HomeDir / ConfigFile / DefaultLogsDir
+    ScryConfig.cs     Load ~/.scry/scry.config.json
+    ScryLogging.cs    Resolve + AddScryFile extension
+    ScryFileLoggerProvider.cs  ILoggerProvider writing to a single timestamped file
+src/Scry.Contracts/
+  ScrySessions.cs     Session registry: Register / Unregister / List / IsAlive
+```
+
 ## Milestones
 
 - **M0 — skeleton (done):** host + gRPC over UDS/named pipe, `Health`/`Shutdown`, CLI prints JSON,
   idle shutdown. No ClrMD.
-- **M1 — dump loading:** `DataTarget.LoadDump`, DAC resolution, single-threaded analysis worker,
-  spawn-on-miss + endpoint discovery, readiness reporting.
+- **M1 — session model + logging (done):** `analyze`/`ps`/`health`/`stop`/`kill` commands, session
+  registry, scryd auto-spawn + readiness polling, `-v` file logging via `ILogger`/DI. No ClrMD yet.
+- **M1b — dump loading:** `DataTarget.LoadDump`, DAC resolution, single-threaded analysis worker,
+  readiness reporting with runtime version.
 - **M2 — cheap reads:** `DumpObject`, `ClrThreads`, `ClrStack`, `DumpStackObjects`.
 - **M3 — heap walks:** `DumpHeap`, `DumpExceptions`, `PrintException` (pagination + cancellation).
 - **M4 — collections:** `DumpConcurrentDictionary`, `DumpConcurrentQueue`.
-- **M5 — hardening:** error-model polish, limit caps, logging, per-RID release CI.
+- **M5 — hardening:** error-model polish, limit caps, per-RID release CI.

@@ -53,6 +53,9 @@
           "Grpc.Core.Api": "[2.80.0, )"
         }
       },
+      "scry.core": {
+        "type": "Project"
+      },
       "Google.Protobuf": {
         "type": "CentralTransitive",
         "requested": "[3.35.0, )",

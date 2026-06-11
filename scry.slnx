@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/Scry.Client/Scry.Client.csproj" />
     <Project Path="src/Scry.Contracts/Scry.Contracts.csproj" />
+    <Project Path="src/Scry.Core/Scry.Core.csproj" />
     <Project Path="src/Scry.Host/Scry.Host.csproj" />
   </Folder>
   <Folder Name="/tests/">

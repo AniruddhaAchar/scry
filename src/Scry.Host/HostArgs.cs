@@ -2,15 +2,16 @@ namespace Scry.Host;
 
 /// <summary>
 /// Minimal argument parsing for scryd. The host is launched by the scry client
-/// (or by hand), not by an agent, so it keeps a tiny hand-rolled parser rather
-/// than taking a dependency on System.CommandLine.
+/// (or by hand), so it keeps a tiny hand-rolled parser rather than taking a
+/// dependency on System.CommandLine.
 /// </summary>
-internal sealed record HostArgs(string DumpPath, TimeSpan IdleTimeout)
+internal sealed record HostArgs(string DumpPath, TimeSpan IdleTimeout, bool Verbose)
 {
     public static bool TryParse(string[] args, out HostArgs? parsed, out string? error)
     {
         string? dump = null;
         var idle = TimeSpan.FromMinutes(10);
+        var verbose = false;
 
         for (var i = 0; i < args.Length; i++)
         {
@@ -34,6 +35,11 @@ internal sealed record HostArgs(string DumpPath, TimeSpan IdleTimeout)
                     idle = TimeSpan.FromMinutes(minutes);
                     break;
 
+                case "--verbose":
+                case "-v":
+                    verbose = true;
+                    break;
+
                 default:
                     return Fail($"unknown argument '{args[i]}'", out parsed, out error);
             }
@@ -44,7 +50,7 @@ internal sealed record HostArgs(string DumpPath, TimeSpan IdleTimeout)
             return Fail("--dump <path> is required", out parsed, out error);
         }
 
-        parsed = new HostArgs(dump, idle);
+        parsed = new HostArgs(dump, idle, verbose);
         error = null;
         return true;
     }

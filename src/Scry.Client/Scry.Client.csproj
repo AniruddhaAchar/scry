@@ -10,11 +10,14 @@
 
   <ItemGroup>
     <PackageReference Include="Grpc.Net.Client" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Logging" />
     <PackageReference Include="System.CommandLine" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Scry.Contracts\Scry.Contracts.csproj" />
+    <ProjectReference Include="..\Scry.Core\Scry.Core.csproj" />
   </ItemGroup>
 
 </Project>

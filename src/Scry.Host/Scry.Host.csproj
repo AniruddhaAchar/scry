@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Scry.Contracts\Scry.Contracts.csproj" />
+    <ProjectReference Include="..\Scry.Core\Scry.Core.csproj" />
   </ItemGroup>
 
 </Project>

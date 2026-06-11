@@ -19,10 +19,8 @@ internal static class ScryChannel
     // creates the pipe well within this window.
     private static readonly TimeSpan PipeConnectTimeout = TimeSpan.FromSeconds(2);
 
-    public static GrpcChannel ForDump(string dumpPath)
+    public static GrpcChannel ForEndpoint(string endpointId)
     {
-        var endpointId = ScryEndpoint.DeriveId(dumpPath);
-
         var handler = new SocketsHttpHandler
         {
             ConnectCallback = (_, ct) => ConnectAsync(endpointId, ct),

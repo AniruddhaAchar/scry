@@ -1,11 +1,12 @@
 using Scry.Contracts;
+using Scry.Core;
 using Scry.Host;
 
-// --- Parse arguments (the dump path is needed even in M0 to derive the endpoint) ---
+// --- Parse arguments ---
 if (!HostArgs.TryParse(args, out var hostArgs, out var argError))
 {
     Console.Error.WriteLine(argError);
-    Console.Error.WriteLine("usage: scryd --dump <path> [--idle-timeout <minutes>]");
+    Console.Error.WriteLine("usage: scryd --dump <path> [--idle-timeout <minutes>] [--verbose]");
     return 2;
 }
 
@@ -13,10 +14,14 @@ var endpointId = ScryEndpoint.DeriveId(hostArgs!.DumpPath);
 
 var builder = WebApplication.CreateSlimBuilder();
 
-// Logs go to stderr so stdout stays clean for any future structured output.
+// Resolve logging config: always keep stderr console; add file logger too.
+var cfg = ScryConfig.Load();
+var resolved = ScryLogging.Resolve("scryd", hostArgs.Verbose, cfg);
+
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole(o => o.LogToStandardErrorThreshold = LogLevel.Trace);
 builder.Logging.AddSimpleConsole(o => o.SingleLine = true);
+builder.Logging.AddScryFile(resolved);
 
 ScryListener.Configure(builder.WebHost, endpointId);
 
@@ -34,6 +39,18 @@ app.MapGrpcService<ScryServiceImpl>();
 
 var state = app.Services.GetRequiredService<HostState>();
 var log = app.Services.GetRequiredService<ILogger<Program>>();
+var lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
+
+// Register/unregister session descriptor around the host's lifetime.
+var descriptor = new SessionDescriptor(
+    endpointId,
+    Path.GetFullPath(hostArgs.DumpPath),
+    Environment.ProcessId,
+    DateTimeOffset.UtcNow,
+    "0.0.1");
+
+lifetime.ApplicationStarted.Register(() => ScrySessions.Register(descriptor));
+lifetime.ApplicationStopped.Register(() => ScrySessions.Unregister(endpointId));
 
 // M0: no dump load yet. From M1, DataTarget.LoadDump + DAC resolution happen
 // here and the host stays LOADING until the runtime is open.
