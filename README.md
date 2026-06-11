@@ -95,10 +95,8 @@ See [ADR 0004](docs/adr/0004-session-model-analyze-handle.md) for the full decis
 
 ## Symbols & dumps
 
-v0.0.1 resolves the DAC and module metadata from the **LOCAL machine**, so analyze a dump on the
-same host that produced it. Cross-machine symbol resolution (symbol servers / `dotnet-symbol`) is
-a later milestone. Use `scripts/collect-dump.ps1 -ProcessId <pid>` to capture a local fixture
-dump for testing.
+v0.0.1 resolves the DAC works on Windows machines. It uses the default [ClrMD](https://github.com/microsoft/clrmd/blob/main/doc/GettingStarted.md#getting-the-dac-from-the-symbol-server) 
+provides for synbol resolution. For Mac and Linux machines, only local machine dump analysis is supported.
 
 ## Logging & config
 
