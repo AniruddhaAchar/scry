@@ -34,7 +34,7 @@ public static class ScryLogging
         }
         else
         {
-            level = LogLevel.Information;
+            level = LogLevel.Warning;
         }
 
         var fileName = $"{appName}-{DateTime.Now:yyyyMMdd-HHmmss}-{Environment.ProcessId}.log";

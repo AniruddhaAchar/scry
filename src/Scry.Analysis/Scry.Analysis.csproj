@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Scry.Analysis — all ClrMD-facing code. Referenced only by Scry.Host.
+       Keeps the analysis engine decoupled from gRPC/hosting so it can back any front-end. -->
+  <PropertyGroup>
+    <RootNamespace>Scry.Analysis</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Diagnostics.Runtime" />
+  </ItemGroup>
+
+</Project>

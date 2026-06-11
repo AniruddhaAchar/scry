@@ -95,6 +95,7 @@ src/
     ScryConfig.cs     Load ~/.scry/scry.config.json
     ScryLogging.cs    Resolve + AddScryFile extension
     ScryFileLoggerProvider.cs  ILoggerProvider writing to a single timestamped file
+  Scry.Analysis/      ClrMD integration: single-threaded AnalysisWorker, DumpSession, IAnalysisCommand<T>
 src/Scry.Contracts/
   ScrySessions.cs     Session registry: Register / Unregister / List / IsAlive
 ```
@@ -105,9 +106,11 @@ src/Scry.Contracts/
   idle shutdown. No ClrMD.
 - **M1 — session model + logging (done):** `analyze`/`ps`/`health`/`stop`/`kill` commands, session
   registry, scryd auto-spawn + readiness polling, `-v` file logging via `ILogger`/DI. No ClrMD yet.
-- **M1b — dump loading:** `DataTarget.LoadDump`, DAC resolution, single-threaded analysis worker,
-  readiness reporting with runtime version.
-- **M2 — cheap reads:** `DumpObject`, `ClrThreads`, `ClrStack`, `DumpStackObjects`.
+- **M1b — dump loading + analysis engine (done):** `DataTarget.LoadDump`, DAC resolution,
+  single-threaded `AnalysisWorker` in dedicated `Scry.Analysis` library, readiness reporting
+  with runtime version. See [ADR 0006](docs/adr/0006-analysis-engine.md).
+- **M2 — first analysis commands (in progress):** `ClrStack` (walk managed thread stacks), then
+  `DumpObject`, `ClrThreads`, `DumpStackObjects`.
 - **M3 — heap walks:** `DumpHeap`, `DumpExceptions`, `PrintException` (pagination + cancellation).
 - **M4 — collections:** `DumpConcurrentDictionary`, `DumpConcurrentQueue`.
 - **M5 — hardening:** error-model polish, limit caps, per-RID release CI.

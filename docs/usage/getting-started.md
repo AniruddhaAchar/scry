@@ -1,11 +1,13 @@
 # Getting started
 
-This walks through the M0 skeleton: starting a host and talking to it. There is no dump analysis
-yet — that arrives in M1 — but the full client ↔ host round trip works today.
+This walks through the M1 session model: collecting a dump, analyzing it, and walking managed
+thread stacks. The `scry` CLI spawns a `scryd` host automatically and queries it over a local
+transport (named pipe on Windows, Unix domain socket on Linux/macOS).
 
 ## Prerequisites
 
 - **.NET 10 SDK** (`dotnet --version` ≥ 10.0).
+- **dotnet-dump** tool: `dotnet tool install -g dotnet-dump` (needed to capture fixture dumps).
 - Build the binaries: `dotnet build scry.slnx`. They land as `scry` and `scryd` under each
   project's `bin/<config>/net10.0/`.
 
@@ -14,76 +16,93 @@ yet — that arrives in M1 — but the full client ↔ host round trip works tod
 - **One host per dump.** A `scryd` process serves exactly one dump. The endpoint it listens on is
   derived from the dump path (`scry-<hash>`), so every `scry` command for that dump reaches the
   same host.
+- **Auto-spawn.** `scry analyze <dump>` spawns the host if needed and polls for readiness. No
+  manual host startup required.
 - **Transport.** A named pipe on Windows, a Unix domain socket on Linux/macOS. No TCP port.
 - **Output.** Every command prints JSON to stdout. Failures print a JSON `error` object and exit
   non-zero.
 
-## Start a host
+## Collect a dump
 
 ```bash
-scryd --dump /path/to/app.dmp --idle-timeout 10
+scripts/collect-dump.ps1 -ProcessId 1234
+# Outputs: C:\Users\...\AppData\Local\Temp\scry-fixture-1234-20260611-143022.dmp
 ```
 
-- `--dump <path>` (required) — in M0 the file isn't opened; the path only seeds the endpoint id.
-- `--idle-timeout <minutes>` (default `10`, `0` disables) — the host exits after this long with no
-  RPC activity, so abandoned hosts don't linger holding a dump's file lock.
+This script uses the globally installed `dotnet-dump` to capture a local memory dump. The dump
+stays on the same machine that produced it (cross-machine symbol resolution is a later milestone).
 
-The host logs readiness to **stderr** and keeps running:
-
-```
-info: scryd ready on endpoint scry-8dab0db081f14f3e for dump /path/to/app.dmp
-info: Now listening on: http://pipe:/scry-8dab0db081f14f3e
-```
-
-## Query health
+## Analyze the dump
 
 ```bash
-scry health --dump /path/to/app.dmp
+scry analyze C:\Users\...\AppData\Local\Temp\scry-fixture-1234-20260611-143022.dmp
 ```
 
 ```json
 {
-  "endpoint": "scry-8dab0db081f14f3e",
+  "handle": "scry-8dab0db081f14f3e",
+  "dumpPath": "C:\\Users\\...\\scry-fixture-1234-20260611-143022.dmp",
+  "pid": 5678,
   "state": "READY",
-  "runtimeVersion": "",
-  "detail": "M0 skeleton: no runtime loaded"
+  "runtimeVersion": "8.0.0"
 }
 ```
 
-`state` is `LOADING`, `READY`, or `FAILED`. From M1, a host stays `LOADING` until the dump and DAC
-are resolved, and `runtimeVersion` is populated.
+The client spawns `scryd`, loads the dump, and returns a handle. Subsequent commands default to
+this session and need no `--dump` argument.
 
-## Shut a host down
-
-```bash
-scry shutdown --dump /path/to/app.dmp
-```
-
-```json
-{ "endpoint": "scry-8dab0db081f14f3e", "shutdown": "requested" }
-```
-
-## When no host is running
+## Walk managed thread stacks
 
 ```bash
-scry health --dump /path/to/never-started.dmp
+# Every managed thread and its frames:
+scry stack
 ```
 
 ```json
 {
-  "error": {
-    "code": "UNAVAILABLE",
-    "message": "no scryd host is reachable for this dump (endpoint scry-...)",
-    "hint": "start one with: scryd --dump \"/path/to/never-started.dmp\""
-  }
+  "threads": [
+    {
+      "osThreadId": 1234,
+      "managedThreadId": 1,
+      "isAlive": true,
+      "frames": [
+        {
+          "kind": "ManagedMethod",
+          "instructionPointer": "0x7ff000001234",
+          "stackPointer": "0x1000",
+          "method": "Main",
+          "type": "Program",
+          "module": "app.dll"
+        }
+      ]
+    }
+  ]
 }
 ```
 
-Exit code is `1`. (M1 adds spawn-on-miss, where `scry` starts the host for you.)
+```bash
+# A single thread (by OS thread id):
+scry stack --thread 1234
+```
 
-## Common options
+Each frame includes: kind (e.g. `ManagedMethod`), instruction pointer, stack pointer, managed
+method name, declaring type, and containing module.
 
-| Option | Commands | Meaning |
-|---|---|---|
-| `--dump <path>` | all | Identifies the dump (and thus the host endpoint). Required. |
-| `--timeout <seconds>` | `health`, `shutdown` | RPC timeout; `0` means no timeout. Default `10`. |
+## Session management
+
+```bash
+# List live sessions:
+scry ps
+
+# Query health of the current session:
+scry health
+
+# Stop the session gracefully:
+scry stop
+
+# Force-kill (if graceful stop hangs):
+scry kill
+```
+
+All commands default to the single active session. Explicitly target a session with `--handle`
+or `--dump`. |

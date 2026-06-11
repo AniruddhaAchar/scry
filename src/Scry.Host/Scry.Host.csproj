@@ -14,6 +14,11 @@
   <ItemGroup>
     <ProjectReference Include="..\Scry.Contracts\Scry.Contracts.csproj" />
     <ProjectReference Include="..\Scry.Core\Scry.Core.csproj" />
+    <ProjectReference Include="..\Scry.Analysis\Scry.Analysis.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Scry.UnitTests" />
   </ItemGroup>
 
 </Project>

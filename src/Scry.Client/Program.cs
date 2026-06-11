@@ -146,6 +146,42 @@ killCommand.SetAction(async (parseResult, ct) =>
 });
 #endregion
 
+#region stack
+var stackHandleArg = new Argument<string?>("handle")
+{
+    Description = "Session handle (optional).",
+    Arity = ArgumentArity.ZeroOrOne,
+};
+var stackHandleOption = new Option<string?>("--handle")
+{
+    Description = "Explicit session handle.",
+};
+var stackThreadOption = new Option<uint?>("--thread")
+{
+    Description = "Only walk this OS thread id (default: all managed threads).",
+};
+var stackTimeoutOption = new Option<int>("--timeout")
+{
+    Description = "RPC timeout in seconds (0 = no timeout).",
+    DefaultValueFactory = _ => 10,
+};
+var stackCommand = new Command("stack", "Print managed thread stack traces as JSON.");
+stackCommand.Arguments.Add(stackHandleArg);
+stackCommand.Options.Add(stackHandleOption);
+stackCommand.Options.Add(stackThreadOption);
+stackCommand.Options.Add(stackTimeoutOption);
+stackCommand.SetAction(async (parseResult, ct) =>
+{
+    await using var sp = Bootstrap.Build(parseResult.GetValue(verboseOption));
+    var handle = parseResult.GetValue(stackHandleArg) ?? parseResult.GetValue(stackHandleOption);
+    return await sp.GetRequiredService<ScryCommands>().StackAsync(
+        handle,
+        parseResult.GetValue(stackThreadOption),
+        parseResult.GetValue(stackTimeoutOption),
+        ct);
+});
+#endregion
+
 #region root
 
 var root = new RootCommand("scry — structured .NET dump analysis for AI agents.");
@@ -153,6 +189,7 @@ root.Options.Add(verboseOption);
 root.Subcommands.Add(analyzeCommand);
 root.Subcommands.Add(psCommand);
 root.Subcommands.Add(healthCommand);
+root.Subcommands.Add(stackCommand);
 root.Subcommands.Add(stopCommand);
 root.Subcommands.Add(killCommand);
 

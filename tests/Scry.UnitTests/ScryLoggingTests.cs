@@ -24,11 +24,11 @@ public sealed class ScryLoggingTests
     }
 
     [Fact]
-    public void Resolve_DefaultLevel_IsInformation()
+    public void Resolve_DefaultLevel_IsWarning()
     {
         var cfg = new ScryConfig();
         var r = ScryLogging.Resolve("scry", verbose: false, cfg);
-        Assert.Equal(LogLevel.Information, r.Level);
+        Assert.Equal(LogLevel.Warning, r.Level);
     }
 
     [Fact]

@@ -143,6 +143,13 @@ internal sealed class ScryCommands(ILogger<ScryCommands> logger)
                     });
                     return 0;
                 }
+                if (response.State == HealthResponse.Types.State.Failed)
+                {
+                    logger.LogError("scryd reported FAILED: {Detail}", response.Detail);
+                    return JsonOut.WriteError(new CliError(
+                        "FAILED_PRECONDITION",
+                        $"dump load failed: {response.Detail}"));
+                }
             }
             catch (Exception ex) when (ex is RpcException or OperationCanceledException or TaskCanceledException)
             {
@@ -216,6 +223,68 @@ internal sealed class ScryCommands(ILogger<ScryCommands> logger)
         catch (Exception ex)
         {
             logger.LogWarning(ex, "health RPC failed for {Handle}", target);
+            return JsonOut.WriteError(ConnectError(ex, target));
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // stack
+    // -------------------------------------------------------------------------
+
+    public async Task<int> StackAsync(
+        string? handle,
+        uint? threadOsId,
+        int timeoutSeconds,
+        CancellationToken ct)
+    {
+        // Analysis verbs target an already-established session by handle (or the
+        // single active one); a dump path is a session-management selector, not an
+        // analysis input — see health/stop/kill for the --dump form.
+        var resolveResult = ResolveTarget(handle, dumpPath: null);
+        if (resolveResult.Error is not null)
+        {
+            return JsonOut.WriteError(resolveResult.Error);
+        }
+
+        var target = resolveResult.Handle!;
+        logger.LogInformation("stack: handle={Handle} thread={Thread}", target, threadOsId);
+
+        try
+        {
+            using var channel = ScryChannel.ForEndpoint(target);
+            var client = new ScryGrpc.ScryClient(channel);
+            using var cts = LinkTimeout(ct, timeoutSeconds);
+            var request = new ClrStackRequest
+            {
+                AllThreads = threadOsId is null,
+                ThreadOsId = threadOsId ?? 0,
+            };
+            var response = await client.ClrStackAsync(request, cancellationToken: cts.Token);
+
+            JsonOut.Write(new
+            {
+                handle = target,
+                threads = response.Threads.Select(t => new
+                {
+                    osThreadId = t.OsThreadId,
+                    managedThreadId = t.ManagedThreadId,
+                    isAlive = t.IsAlive,
+                    frames = t.Frames.Select(f => new
+                    {
+                        kind = f.Kind,
+                        ip = $"0x{f.InstructionPointer:x}",
+                        sp = $"0x{f.StackPointer:x}",
+                        method = string.IsNullOrEmpty(f.Method) ? null : f.Method,
+                        type = string.IsNullOrEmpty(f.Type) ? null : f.Type,
+                        module = string.IsNullOrEmpty(f.Module) ? null : f.Module,
+                    }).ToArray(),
+                }).ToArray(),
+            });
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "stack RPC failed for {Handle}", target);
             return JsonOut.WriteError(ConnectError(ex, target));
         }
     }
@@ -328,12 +397,22 @@ internal sealed class ScryCommands(ILogger<ScryCommands> logger)
 
     private static (string? Handle, SessionDescriptor? Descriptor, CliError? Error) ResolveTarget(
         string? handle,
-        string? dumpPath)
+        string? dumpPath) =>
+        ResolveTarget(handle, dumpPath, ScrySessions.List());
+
+    /// <summary>
+    /// Pure target-resolution logic over a supplied session list (no I/O), so it can be
+    /// unit-tested. Explicit handle wins; then a dump path (derive its handle); otherwise
+    /// default to the single active session, erroring on zero or more than one.
+    /// </summary>
+    internal static (string? Handle, SessionDescriptor? Descriptor, CliError? Error) ResolveTarget(
+        string? handle,
+        string? dumpPath,
+        IReadOnlyList<SessionDescriptor> sessions)
     {
         // Explicit handle takes top priority.
         if (!string.IsNullOrEmpty(handle))
         {
-            var sessions = ScrySessions.List();
             var d = sessions.FirstOrDefault(s => s.Handle == handle);
             return (handle, d, null);
         }
@@ -342,14 +421,12 @@ internal sealed class ScryCommands(ILogger<ScryCommands> logger)
         if (!string.IsNullOrEmpty(dumpPath))
         {
             var derived = ScryEndpoint.DeriveId(dumpPath);
-            var sessions = ScrySessions.List();
             var d = sessions.FirstOrDefault(s => s.Handle == derived);
             return (derived, d, null);
         }
 
         // Default: the single active session.
-        var all = ScrySessions.List();
-        if (all.Count == 0)
+        if (sessions.Count == 0)
         {
             return (null, null, new CliError(
                 "FAILED_PRECONDITION",
@@ -357,16 +434,16 @@ internal sealed class ScryCommands(ILogger<ScryCommands> logger)
                 "scry analyze <dump>"));
         }
 
-        if (all.Count > 1)
+        if (sessions.Count > 1)
         {
-            var handleList = string.Join(", ", all.Select(s => s.Handle));
+            var handleList = string.Join(", ", sessions.Select(s => s.Handle));
             return (null, null, new CliError(
                 "FAILED_PRECONDITION",
                 $"more than one live session ({handleList}) — pass an explicit handle or --dump",
                 null));
         }
 
-        return (all[0].Handle, all[0], null);
+        return (sessions[0].Handle, sessions[0], null);
     }
 
     private static string? FindScryd()

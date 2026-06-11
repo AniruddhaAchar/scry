@@ -36,6 +36,9 @@ dotnet build scry.slnx
 export SCRYD_PATH=src/Scry.Host/bin/Debug/net10.0/scryd
 SCRY=src/Scry.Client/bin/Debug/net10.0/scry
 
+# Collect a local dump for testing:
+$SCRY_SCRIPTS/collect-dump.ps1 -ProcessId <pid>
+
 # Establish a session for a dump:
 $SCRY analyze /path/to/app.dmp
 ```
@@ -46,13 +49,19 @@ $SCRY analyze /path/to/app.dmp
   "dumpPath": "/path/to/app.dmp",
   "pid": 12345,
   "state": "READY",
-  "runtimeVersion": ""
+  "runtimeVersion": "8.0.0"
 }
 ```
 
 ```bash
 # List live sessions:
 $SCRY ps
+
+# Walk managed thread stacks (all threads, as JSON):
+$SCRY stack
+
+# Walk a single thread (by OS id):
+$SCRY stack --thread 1234
 
 # Query health (no --dump needed — defaults to single active session):
 $SCRY health
@@ -77,6 +86,13 @@ All commands print JSON to stdout. Errors print a JSON `error` object and exit n
   refusal in `analyze`.
 
 See [ADR 0004](docs/adr/0004-session-model-analyze-handle.md) for the full decision record.
+
+## Symbols & dumps
+
+v0.0.1 resolves the DAC and module metadata from the **LOCAL machine**, so analyze a dump on the
+same host that produced it. Cross-machine symbol resolution (symbol servers / `dotnet-symbol`) is
+a later milestone. Use `scripts/collect-dump.ps1 -ProcessId <pid>` to capture a local fixture
+dump for testing.
 
 ## Logging & config
 

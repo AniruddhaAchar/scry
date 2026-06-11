@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/Scry.Analysis/Scry.Analysis.csproj" />
     <Project Path="src/Scry.Client/Scry.Client.csproj" />
     <Project Path="src/Scry.Contracts/Scry.Contracts.csproj" />
     <Project Path="src/Scry.Core/Scry.Core.csproj" />

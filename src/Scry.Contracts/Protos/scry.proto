@@ -15,6 +15,9 @@ service Scry {
 
   // Ask the host to dispose the runtime, release the dump file, and exit.
   rpc Shutdown(ShutdownRequest) returns (ShutdownResponse);
+
+  // Walk managed thread stacks. thread_os_id == 0 (or all_threads) → every thread.
+  rpc ClrStack(ClrStackRequest) returns (ClrStackResponse);
 }
 
 message HealthRequest {}
@@ -33,3 +36,28 @@ message HealthResponse {
 message ShutdownRequest {}
 
 message ShutdownResponse {}
+
+message ClrStackRequest {
+  uint32 thread_os_id = 1;   // 0 = all threads
+  bool   all_threads  = 2;   // explicit "all" even if a stray id is set
+}
+
+message ClrStackResponse {
+  repeated ThreadStack threads = 1;
+}
+
+message ThreadStack {
+  uint32 os_thread_id = 1;
+  int32  managed_thread_id = 2;
+  bool   is_alive = 3;
+  repeated StackFrame frames = 4;
+}
+
+message StackFrame {
+  string kind = 1;
+  uint64 instruction_pointer = 2;
+  uint64 stack_pointer = 3;
+  string method = 4;
+  string type = 5;
+  string module = 6;
+}

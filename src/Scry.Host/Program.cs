@@ -1,3 +1,4 @@
+using Scry.Analysis;
 using Scry.Contracts;
 using Scry.Core;
 using Scry.Host;
@@ -28,6 +29,7 @@ ScryListener.Configure(builder.WebHost, endpointId);
 builder.Services.AddGrpc();
 builder.Services.AddSingleton<HostState>();
 builder.Services.AddSingleton<ActivityTracker>();
+builder.Services.AddSingleton(new AnalysisWorker(Path.GetFullPath(hostArgs.DumpPath)));
 builder.Services.AddSingleton<IHostedService>(sp => new IdleShutdownService(
     hostArgs.IdleTimeout,
     sp.GetRequiredService<ActivityTracker>(),
@@ -40,6 +42,7 @@ app.MapGrpcService<ScryServiceImpl>();
 var state = app.Services.GetRequiredService<HostState>();
 var log = app.Services.GetRequiredService<ILogger<Program>>();
 var lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
+var worker = app.Services.GetRequiredService<AnalysisWorker>();
 
 // Register/unregister session descriptor around the host's lifetime.
 var descriptor = new SessionDescriptor(
@@ -52,10 +55,25 @@ var descriptor = new SessionDescriptor(
 lifetime.ApplicationStarted.Register(() => ScrySessions.Register(descriptor));
 lifetime.ApplicationStopped.Register(() => ScrySessions.Unregister(endpointId));
 
-// M0: no dump load yet. From M1, DataTarget.LoadDump + DAC resolution happen
-// here and the host stays LOADING until the runtime is open.
-state.MarkReady(runtimeVersion: string.Empty, detail: "M0 skeleton: no runtime loaded");
-log.LogInformation("scryd ready on endpoint {Endpoint} for dump {Dump}", endpointId, hostArgs.DumpPath);
+// Load the dump on the analysis thread once the host is up. The host stays
+// in LOADING (then READY or FAILED) so the client can poll Health; a failed
+// load keeps the process alive to report FAILED rather than vanishing.
+lifetime.ApplicationStarted.Register(() => _ = Task.Run(async () =>
+{
+    var result = await worker.LoadAsync();
+    if (result.Success)
+    {
+        state.MarkReady(result.RuntimeVersion, result.Detail);
+        log.LogInformation("scryd ready on {Endpoint}: runtime {Version}", endpointId, result.RuntimeVersion);
+    }
+    else
+    {
+        state.MarkFailed(result.Detail);
+        log.LogError("scryd dump load FAILED on {Endpoint}: {Detail}", endpointId, result.Detail);
+    }
+}));
+
+lifetime.ApplicationStopped.Register(() => worker.Dispose());
 
 app.Run();
 return 0;

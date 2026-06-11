@@ -15,6 +15,9 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Scry.Contracts\Scry.Contracts.csproj" />
     <ProjectReference Include="..\..\src\Scry.Core\Scry.Core.csproj" />
+    <ProjectReference Include="..\..\src\Scry.Host\Scry.Host.csproj" />
+    <ProjectReference Include="..\..\src\Scry.Client\Scry.Client.csproj" />
+    <ProjectReference Include="..\..\src\Scry.Analysis\Scry.Analysis.csproj" />
   </ItemGroup>
 
 </Project>

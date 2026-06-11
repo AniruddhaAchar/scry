@@ -20,4 +20,8 @@
     <ProjectReference Include="..\Scry.Core\Scry.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Scry.UnitTests" />
+  </ItemGroup>
+
 </Project>
