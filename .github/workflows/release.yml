@@ -11,8 +11,8 @@ jobs:
         rid: [win-x64, win-arm64, linux-x64, linux-arm64, osx-arm64]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
       - name: Resolve version from tag
@@ -25,7 +25,7 @@ jobs:
       - name: Zip
         run: cd publish/${{ matrix.rid }} && zip -r ../../scry-${VERSION}-${{ matrix.rid }}.zip .
       - name: Attach zip to the release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           # A tag with a prerelease suffix (e.g. v0.0.1-rc.1) marks the Release as a prerelease.
           prerelease: ${{ contains(github.ref_name, '-') }}
@@ -36,8 +36,8 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
       - name: Resolve version from tag
