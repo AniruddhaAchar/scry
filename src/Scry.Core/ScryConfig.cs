@@ -12,11 +12,21 @@ public sealed record LoggingConfig
     public string? Level { get; init; }
 }
 
+/// <summary>Symbol resolution configuration from <c>scry.config.json</c>.</summary>
+public sealed record SymbolsConfig
+{
+    /// <summary>Symbol path for DAC and binary resolution (e.g. "srv*C:\\sym*https://msdl.microsoft.com/download/symbols").</summary>
+    public string? Path { get; init; }
+}
+
 /// <summary>Root configuration record loaded from <c>~/.scry/scry.config.json</c>.</summary>
 public sealed record ScryConfig
 {
     /// <summary>Logging configuration block.</summary>
     public LoggingConfig Logging { get; init; } = new();
+
+    /// <summary>Symbol resolution configuration block.</summary>
+    public SymbolsConfig? Symbols { get; init; }
 
     private static readonly JsonSerializerOptions s_jsonOptions = new()
     {

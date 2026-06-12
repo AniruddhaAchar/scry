@@ -1,14 +1,24 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- scryd — the long-lived host daemon. Loads one dump (from M1 onward) and
-       serves analysis commands over gRPC on a dump-derived endpoint. -->
+  <!-- Scry.Host — the daemon ("scryd") as a library. Now hosts Kestrel/gRPC from HostMode.RunAsync,
+       called by the single scry exe in __host mode. See docs/adr/0007. -->
   <PropertyGroup>
-    <AssemblyName>scryd</AssemblyName>
     <RootNamespace>Scry.Host</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Grpc.AspNetCore" />
+  </ItemGroup>
+
+  <!-- The Web SDK supplied these as implicit global usings; as a plain-SDK library we
+       restore them so the host sources (which had no explicit ASP.NET usings) compile. -->
+  <ItemGroup>
+    <Using Include="Microsoft.AspNetCore.Builder" />
+    <Using Include="Microsoft.AspNetCore.Hosting" />
+    <Using Include="Microsoft.Extensions.DependencyInjection" />
+    <Using Include="Microsoft.Extensions.Hosting" />
+    <Using Include="Microsoft.Extensions.Logging" />
   </ItemGroup>
 
   <ItemGroup>

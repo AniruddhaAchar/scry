@@ -10,37 +10,46 @@ returns **structured JSON**, not human-readable SOS text, so an agent can chain 
 
 ## How it works
 
-Two binaries:
+`scry` is a single executable with two modes:
 
-| Binary  | Lifetime    | Role |
-|---------|-------------|------|
-| `scryd` | long-lived  | Host daemon. Loads one dump with ClrMD, holds the runtime open, serves commands over gRPC. |
-| `scry`  | short-lived | The CLI an agent invokes per command. Spawns or connects to the host for a dump, issues one gRPC call, prints JSON, exits. |
+- **CLI mode** — the default. An agent invokes it per command (analyze, health, dumpheap, etc.).
+- **Host mode** (`scry __host ...`) — an internal mode that runs the long-lived gRPC host daemon.
 
-Loading a dump is expensive (seconds, gigabytes of RAM), so the daemon stays warm between
-commands. `scry analyze <dump>` spawns the daemon once and prints a **handle**. Subsequent
-commands (`health`, `stop`, `kill`) default to the single active session — no dump path needed.
+When you run `scry analyze <dump>`, the CLI spawns itself in host mode as a detached daemon. The
+daemon loads one dump with ClrMD, holds the runtime open, and serves commands over gRPC. Loading
+is expensive (seconds, gigabytes of RAM), so the daemon stays warm between commands, and the same
+executable instance serves both the CLI and daemon roles.
 
-The client finds the right daemon by deriving a deterministic endpoint id from the dump path, and
-talks to it over a **named pipe** (Windows) or **Unix domain socket** (Linux/macOS). See
-[ADR 0002](docs/adr/0002-grpc-over-uds-and-named-pipes.md).
+The daemon is found by deriving a deterministic endpoint id from the dump path and listens over a
+**named pipe** (Windows) or **Unix domain socket** (Linux/macOS). See [ADR 0002](docs/adr/0002-grpc-over-uds-and-named-pipes.md)
+and [ADR 0007](docs/adr/0007-single-binary-and-distribution.md).
 
-## Quickstart
+## Install
+
+### Global tool (requires ASP.NET Core 10 runtime)
+
+```bash
+dotnet tool install -g Scry.Cli
+scry analyze /path/to/app.dmp
+```
+
+### Self-contained zips (no runtime required)
+
+Download pre-built per-RID archives from [GitHub Releases](https://github.com/acrrd/scry/releases).
+Unzip and run the `scry` executable directly.
+
+## Quickstart (development)
 
 Requires the **.NET 10 SDK**.
 
 ```bash
 dotnet build scry.slnx
 
-# (Dev only: tell scry where to find scryd since they live in separate build dirs)
-export SCRYD_PATH=src/Scry.Host/bin/Debug/net10.0/scryd
-SCRY=src/Scry.Client/bin/Debug/net10.0/scry
-
 # Collect a local dump for testing:
-$SCRY_SCRIPTS/collect-dump.ps1 -ProcessId <pid>
+scripts/collect-dump.ps1 -ProcessId <pid>
 
-# Establish a session for a dump:
-$SCRY analyze /path/to/app.dmp
+# Establish a session for a dump (the single exe spawns itself in host mode):
+src/Scry.Client/bin/Debug/net10.0/scry analyze /path/to/app.dmp
 ```
 
 ```json
@@ -54,6 +63,9 @@ $SCRY analyze /path/to/app.dmp
 ```
 
 ```bash
+# (Development: define a shorthand for your build)
+SCRY=src/Scry.Client/bin/Debug/net10.0/scry
+
 # List live sessions:
 $SCRY ps
 
@@ -95,12 +107,20 @@ See [ADR 0004](docs/adr/0004-session-model-analyze-handle.md) for the full decis
 
 ## Symbols & dumps
 
-v0.0.1 resolves the DAC works on Windows machines. It uses the default [ClrMD](https://github.com/microsoft/clrmd/blob/main/doc/GettingStarted.md#getting-the-dac-from-the-symbol-server) 
-provides for synbol resolution. For Mac and Linux machines, only local machine dump analysis is supported.
+**Windows + released runtimes:** The DAC for released .NET runtimes is resolved automatically from
+the [Microsoft symbol server](https://msdl.microsoft.com/download/symbols), using ClrMD's
+[default symbol-server resolution](https://github.com/microsoft/clrmd/blob/main/doc/GettingStarted.md#getting-the-dac-from-the-symbol-server).
+The first `scry analyze` may take a moment as it downloads the DAC, but subsequent commands on the
+same session reuse it. Offline or preview runtimes can be served via a `~/.scry/scry.config.json`
+symbol path.
+
+**Linux/macOS:** DAC acquisition is less turnkey; v0.0.1 supports local-machine dump analysis there,
+and broader cross-platform symbol robustness is deferred to a later milestone. See
+[ADR 0008](docs/adr/0008-dac-and-symbol-resolution.md).
 
 ## Logging & config
 
-Both `scry` and `scryd` write per-process log files to `~/.scry/logs/`. Config is optional at
+`scry` writes per-process log files to `~/.scry/logs/`. Config is optional at
 `~/.scry/scry.config.json`:
 
 ```json
@@ -108,24 +128,24 @@ Both `scry` and `scryd` write per-process log files to `~/.scry/logs/`. Config i
   "logging": {
     "folder": "/custom/log/dir",
     "level": "Information"
+  },
+  "symbols": {
+    "path": "srv*C:\\sym*https://msdl.microsoft.com/download/symbols"
   }
 }
 ```
 
-Pass `-v` / `--verbose` to force `Debug` level. `scry analyze -v` forwards `-v` to scryd.
-Stdout stays pure JSON — logs go to the file only.
+The `symbols.path` configures the DAC and binary cache location. Pass `-v` / `--verbose` to force
+`Debug` level. `scry analyze -v` forwards `-v` to the host. Stdout stays pure JSON — logs go to
+the file only.
 
-See [ADR 0005](docs/adr/0005-configuration-and-logging.md).
+See [ADR 0005](docs/adr/0005-configuration-and-logging.md) and [ADR 0008](docs/adr/0008-dac-and-symbol-resolution.md).
 
 ## Development
 
 ```bash
 dotnet test   scry.slnx --filter Category=Unit     # fast unit tests
 dotnet format scry.slnx --verify-no-changes        # formatting gate
-
-# SCRYD_PATH env var: point scry at the scryd binary (useful during development
-# when the two binaries are in separate build output directories).
-export SCRYD_PATH=/path/to/scryd[.exe]
 ```
 
 Pre-commit hooks (formatting + unit tests) are managed with
@@ -136,7 +156,8 @@ prek install        # one-time
 ```
 
 Package versions are centralized in `Directory.Packages.props`; `packages.lock.json` files are
-committed for reproducible restores.
+committed for reproducible restores. The single `scry` executable self-spawns in host mode
+(`scry __host ...`), so no separate binary location setup is needed during development.
 
 ## License
 

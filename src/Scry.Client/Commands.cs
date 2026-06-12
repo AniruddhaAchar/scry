@@ -60,67 +60,24 @@ internal sealed class ScryCommands(ILogger<ScryCommands> logger)
                 $"stop it first: scry stop {running.Handle}"));
         }
 
-        // Locate scryd binary.
-        var scrydPath = FindScryd();
-        if (scrydPath is null)
+        var (proc, spawnError) = SpawnHost(fullPath, idleTimeoutMin, verbose);
+        if (proc is null)
         {
-            logger.LogError("scryd binary not found");
-            return JsonOut.WriteError(new CliError(
-                "NOT_FOUND",
-                "scryd binary not found",
-                "set SCRYD_PATH env var or ensure scryd is next to scry"));
-        }
-
-        logger.LogInformation("Spawning scryd: {Path} --dump {Dump} --idle-timeout {Idle}", scrydPath, fullPath, idleTimeoutMin);
-
-        var psi = new ProcessStartInfo(scrydPath)
-        {
-            UseShellExecute = false,   // run the binary directly (no shell stream sharing)
-            CreateNoWindow = true,     // no console window for the detached daemon
-
-            // Leave the standard streams un-redirected: scry does not pump the
-            // daemon's output. Inheritance of scry's own handles is blocked
-            // separately via StdHandle.MakeNonInheritable() below so a caller
-            // that pipes `scry analyze` doesn't hang on the detached daemon.
-            RedirectStandardOutput = false,
-            RedirectStandardError = false,
-            RedirectStandardInput = false,
-        };
-        psi.ArgumentList.Add("--dump");
-        psi.ArgumentList.Add(fullPath);
-        psi.ArgumentList.Add("--idle-timeout");
-        psi.ArgumentList.Add(idleTimeoutMin.ToString());
-        if (verbose)
-        {
-            psi.ArgumentList.Add("--verbose");
-        }
-
-        Process proc;
-        try
-        {
-            // Prevent the detached daemon from inheriting our standard handles, so
-            // a caller reading scry's stdout to EOF doesn't hang (see StdHandle).
-            StdHandle.MakeNonInheritable();
-            proc = Process.Start(psi) ?? throw new InvalidOperationException("Process.Start returned null");
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to spawn scryd");
-            return JsonOut.WriteError(new CliError("UNAVAILABLE", $"failed to spawn scryd: {ex.Message}"));
+            return JsonOut.WriteError(spawnError!);
         }
 
         // Poll Health until READY or timeout.
         var deadline = DateTime.UtcNow.AddSeconds(readyTimeoutSec);
-        logger.LogInformation("Waiting for scryd READY (timeout {Sec}s) ...", readyTimeoutSec);
+        logger.LogInformation("Waiting for host READY (timeout {Sec}s) ...", readyTimeoutSec);
 
         while (DateTime.UtcNow < deadline)
         {
             if (proc.HasExited)
             {
-                logger.LogError("scryd exited prematurely (exit code {Code})", proc.ExitCode);
+                logger.LogError("host exited prematurely (exit code {Code})", proc.ExitCode);
                 return JsonOut.WriteError(new CliError(
                     "UNAVAILABLE",
-                    $"scryd exited prematurely (exit code {proc.ExitCode})"));
+                    $"host exited prematurely (exit code {proc.ExitCode})"));
             }
 
             try
@@ -132,7 +89,7 @@ internal sealed class ScryCommands(ILogger<ScryCommands> logger)
                 var response = await client.HealthAsync(new HealthRequest(), cancellationToken: cts.Token);
                 if (response.State == HealthResponse.Types.State.Ready)
                 {
-                    logger.LogInformation("scryd READY (pid={Pid})", proc.Id);
+                    logger.LogInformation("host READY (pid={Pid})", proc.Id);
                     JsonOut.Write(new
                     {
                         handle,
@@ -145,7 +102,7 @@ internal sealed class ScryCommands(ILogger<ScryCommands> logger)
                 }
                 if (response.State == HealthResponse.Types.State.Failed)
                 {
-                    logger.LogError("scryd reported FAILED: {Detail}", response.Detail);
+                    logger.LogError("host reported FAILED: {Detail}", response.Detail);
                     return JsonOut.WriteError(new CliError(
                         "FAILED_PRECONDITION",
                         $"dump load failed: {response.Detail}"));
@@ -159,10 +116,63 @@ internal sealed class ScryCommands(ILogger<ScryCommands> logger)
             await Task.Delay(200, ct);
         }
 
-        logger.LogError("Timed out waiting for scryd READY after {Sec}s", readyTimeoutSec);
+        logger.LogError("Timed out waiting for host READY after {Sec}s", readyTimeoutSec);
         return JsonOut.WriteError(new CliError(
             "DEADLINE_EXCEEDED",
-            $"timed out waiting for scryd to become READY after {readyTimeoutSec}s"));
+            $"timed out waiting for host to become READY after {readyTimeoutSec}s"));
+    }
+
+    /// <summary>
+    /// Spawns this same executable in hidden host mode (<c>scry __host --dump ...</c>) as a
+    /// detached process that outlives the CLI (ADR 0007). Returns the started process, or a
+    /// <see cref="CliError"/> if the executable path can't be resolved or the spawn fails.
+    /// </summary>
+    private (Process? Proc, CliError? Error) SpawnHost(string fullPath, int idleTimeoutMin, bool verbose)
+    {
+        var exePath = Environment.ProcessPath;
+        if (string.IsNullOrEmpty(exePath))
+        {
+            logger.LogError("Could not determine the scry executable path");
+            return (null, new CliError("UNAVAILABLE", "could not determine the scry executable path to spawn the host"));
+        }
+
+        logger.LogInformation("Spawning host mode: {Path} __host --dump {Dump} --idle-timeout {Idle}", exePath, fullPath, idleTimeoutMin);
+
+        var psi = new ProcessStartInfo(exePath)
+        {
+            UseShellExecute = false,   // run the binary directly (no shell stream sharing)
+            CreateNoWindow = true,     // no console window for the detached daemon
+
+            // Leave the standard streams un-redirected: scry does not pump the daemon's
+            // output. Inheritance of scry's own handles is blocked via StdHandle below so
+            // a caller that pipes `scry analyze` doesn't hang on the detached daemon.
+            RedirectStandardOutput = false,
+            RedirectStandardError = false,
+            RedirectStandardInput = false,
+        };
+        psi.ArgumentList.Add("__host");
+        psi.ArgumentList.Add("--dump");
+        psi.ArgumentList.Add(fullPath);
+        psi.ArgumentList.Add("--idle-timeout");
+        psi.ArgumentList.Add(idleTimeoutMin.ToString());
+        if (verbose)
+        {
+            psi.ArgumentList.Add("--verbose");
+        }
+
+        try
+        {
+            // Prevent the detached daemon from inheriting our standard handles, so a
+            // caller reading scry's stdout to EOF doesn't hang (see StdHandle).
+            StdHandle.MakeNonInheritable();
+            var proc = Process.Start(psi) ?? throw new InvalidOperationException("Process.Start returned null");
+            return (proc, null);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to spawn host mode");
+            return (null, new CliError("UNAVAILABLE", $"failed to spawn host mode: {ex.Message}"));
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -627,27 +637,6 @@ internal sealed class ScryCommands(ILogger<ScryCommands> logger)
         }
 
         return (sessions[0].Handle, sessions[0], null);
-    }
-
-    private static string? FindScryd()
-    {
-        var envPath = Environment.GetEnvironmentVariable("SCRYD_PATH");
-        if (!string.IsNullOrEmpty(envPath) && File.Exists(envPath))
-        {
-            return envPath;
-        }
-
-        var baseDir = AppContext.BaseDirectory;
-        foreach (var name in new[] { "scryd.exe", "scryd" })
-        {
-            var candidate = Path.Combine(baseDir, name);
-            if (File.Exists(candidate))
-            {
-                return candidate;
-            }
-        }
-
-        return null;
     }
 
     private static CancellationTokenSource LinkTimeout(CancellationToken ct, int seconds)

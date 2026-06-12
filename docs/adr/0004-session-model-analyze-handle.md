@@ -3,6 +3,10 @@
 - **Status:** Accepted
 - **Date:** 2026-06-10
 - **Supersedes:** the M0 CLI surface where every command took a required `--dump`.
+- **Amended by:** [ADR 0007](0007-single-binary-and-distribution.md) — the *Spawning* section
+  below (separate `scryd` binary located via `SCRYD_PATH` / next-to-binary) is superseded. scry now
+  ships as a single binary and `analyze` spawns *itself* in a hidden `__host` mode; "scryd" below
+  refers to that host **mode**, not a separate executable.
 
 ## Context
 
@@ -61,6 +65,11 @@ Discovery and the one-per-session rules live in a shared `ScrySessions` helper i
 used by both `scryd` (register/unregister) and `scry` (list/resolve/prune).
 
 ### Spawning
+
+> **Amended by [ADR 0007](0007-single-binary-and-distribution.md).** scry is now a single binary;
+> `analyze` re-executes *itself* (`Environment.ProcessPath`) with a hidden `__host` verb instead of
+> locating a separate `scryd`. `FindScryd` and the `SCRYD_PATH` override are removed. The original
+> text is kept below for history.
 
 `scry analyze` starts `scryd` as an independent process (`UseShellExecute=false`,
 `CreateNoWindow=true`, no wait) that outlives the short-lived client. The `scryd` binary is located

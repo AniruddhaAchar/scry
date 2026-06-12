@@ -5,17 +5,16 @@ Guidance for Claude Code (and humans) working in this repo.
 ## What scry is
 
 `scry` is a ClrMD-based .NET memory-dump analyzer built **for AI agents**: it returns
-**structured JSON**, not human-readable SOS text. It is two processes:
+**structured JSON**, not human-readable SOS text. It is a single executable with two modes:
 
-- **`scryd`** — a long-lived host daemon. Loads one dump with ClrMD, holds the `ClrRuntime`
-  open, and serves analysis commands over gRPC. Loading is expensive (seconds, GBs of RAM);
-  keeping it warm is the whole reason the daemon exists.
-- **`scry`** — a short-lived, stateless CLI. An agent invokes it per command. It connects to
-  (or, from M1, spawns) the `scryd` host for the target dump, issues one gRPC call, prints the
-  JSON response, and exits.
+- **CLI mode** — the default. Invoked by agents per command (analyze, health, dumpheap, etc.).
+- **Host mode** (`scry __host --dump ...`) — an internal daemon mode. The CLI spawns itself in
+  this mode as a long-lived process. It loads one dump with ClrMD, holds the `ClrRuntime` open,
+  and serves analysis commands over gRPC. Loading is expensive (seconds, GBs of RAM); keeping it
+  warm is the whole reason the daemon exists.
 
-The two binaries are named exactly `scry` and `scryd` on disk (set via `<AssemblyName>`), so what
-an agent types matches what ships.
+The two modes are the same binary (`scry`), so they stay version-matched automatically. See
+[ADR 0007](docs/adr/0007-single-binary-and-distribution.md).
 
 ## Layout
 
@@ -26,13 +25,18 @@ Directory.Packages.props     Central Package Management — all package versions
 global.json                  Pins the .NET SDK band
 src/
   Scry.Contracts/            Shared gRPC contract (Protos/scry.proto) + ScryEndpoint naming
-  Scry.Host/                 scryd daemon (AssemblyName = scryd; Microsoft.NET.Sdk.Web)
-  Scry.Client/               scry CLI    (AssemblyName = scry; System.CommandLine)
+  Scry.Host/                 Host mode library (HostMode.RunAsync; Microsoft.NET.Sdk + AspNetCore ref)
+  Scry.Client/               Single scry exe (CLI + dispatch to host mode; System.CommandLine)
+  Scry.Core/                 Shared config, logging, and path helpers
+  Scry.Analysis/             ClrMD integration and analysis engine
 tests/
   Scry.UnitTests/            xUnit v3. Every test is [Trait("Category","Unit")].
 docs/
   adr/                       Architecture Decision Records
   usage/                     Usage docs
+.github/
+  workflows/
+    release.yml              Tag-triggered release: self-contained zips + NuGet tool publish
 ```
 
 ## Build / test / run
@@ -42,10 +46,9 @@ dotnet build scry.slnx
 dotnet test  scry.slnx --filter Category=Unit       # fast, dump-free unit tests
 dotnet format scry.slnx --verify-no-changes         # what the pre-commit hook enforces
 
-# End-to-end (M1 session model): spawn a host, query it, stop it.
-# SCRYD_PATH lets the client find scryd when the two binaries are in separate build dirs.
-export SCRYD_PATH=/path/to/scryd[.exe]
-scry analyze [-v] <path/to/dump>   # spawns scryd, waits for READY, prints handle
+# End-to-end (M1 session model): spawn a host (via self-exec), query it, stop it.
+# The single exe spawns itself in host mode (__host) automatically.
+scry analyze [-v] <path/to/dump>   # spawns itself in host mode, waits for READY, prints handle
 scry ps                            # list live sessions
 scry health                        # health of the single active session
 scry stop                          # graceful shutdown (force-kill fallback)
@@ -81,10 +84,11 @@ scry health --dump <path>
 
 ## Logging & config
 
-Both binaries write a per-process log file to `~/.scry/logs/` (configurable via
+`scry` writes a per-process log file to `~/.scry/logs/` (configurable via
 `~/.scry/scry.config.json`). The `-v`/`--verbose` flag forces `Debug` level. On `scry analyze -v`,
-the `-v` is forwarded to the spawned `scryd`. Stdout always stays pure JSON — logs go to the file
-only. See [ADR 0005](docs/adr/0005-configuration-and-logging.md).
+the `-v` is forwarded to the spawned host. Stdout always stays pure JSON — logs go to the file
+only. Symbol path is configurable via `~/.scry/scry.config.json` under `symbols.path` (see ADR 0008).
+See [ADR 0005](docs/adr/0005-configuration-and-logging.md).
 
 ## Layout additions (M1 session model)
 
@@ -105,7 +109,7 @@ src/Scry.Contracts/
 - **M0 — skeleton (done):** host + gRPC over UDS/named pipe, `Health`/`Shutdown`, CLI prints JSON,
   idle shutdown. No ClrMD.
 - **M1 — session model + logging (done):** `analyze`/`ps`/`health`/`stop`/`kill` commands, session
-  registry, scryd auto-spawn + readiness polling, `-v` file logging via `ILogger`/DI. No ClrMD yet.
+  registry, auto-spawn + readiness polling, `-v` file logging via `ILogger`/DI. No ClrMD yet.
 - **M1b — dump loading + analysis engine (done):** `DataTarget.LoadDump`, DAC resolution,
   single-threaded `AnalysisWorker` in dedicated `Scry.Analysis` library, readiness reporting
   with runtime version. See [ADR 0006](docs/adr/0006-analysis-engine.md).
@@ -113,5 +117,9 @@ src/Scry.Contracts/
 - **M3 — heap walks (done):** `DumpHeap` (stats + paged object listing), `DumpExceptions`
   (paged exception addresses + type/message), `PrintException` (detail + stack trace).
   Immutable `HeapSnapshot` cache built once on analysis thread, served DAC-free for stats/paging.
-- **M4 — collections:** `DumpConcurrentDictionary`, `DumpConcurrentQueue`.
-- **M5 — hardening:** error-model polish, limit caps, per-RID release CI.
+- **M4 — distribution (done):** Single binary (`scry`) with hidden `__host` mode. Global tool
+  packaging, self-contained per-RID zips, tag-triggered release CI. Symbol path config. See
+  [ADR 0007](docs/adr/0007-single-binary-and-distribution.md) and
+  [ADR 0008](docs/adr/0008-dac-and-symbol-resolution.md).
+- **M5 — collections:** `DumpConcurrentDictionary`, `DumpConcurrentQueue`.
+- **M6 — hardening:** error-model polish, limit caps, broader cross-platform DAC robustness.

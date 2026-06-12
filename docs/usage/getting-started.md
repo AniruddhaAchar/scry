@@ -1,23 +1,23 @@
 # Getting started
 
 This walks through the M1 session model: collecting a dump, analyzing it, and walking managed
-thread stacks. The `scry` CLI spawns a `scryd` host automatically and queries it over a local
-transport (named pipe on Windows, Unix domain socket on Linux/macOS).
+thread stacks. The `scry` CLI spawns itself in internal host mode automatically and queries it
+over a local transport (named pipe on Windows, Unix domain socket on Linux/macOS).
 
 ## Prerequisites
 
-- **.NET 10 SDK** (`dotnet --version` ≥ 10.0).
-- **dotnet-dump** tool: `dotnet tool install -g dotnet-dump` (needed to capture fixture dumps).
-- Build the binaries: `dotnet build scry.slnx`. They land as `scry` and `scryd` under each
-  project's `bin/<config>/net10.0/`.
+- **Install option 1: Global tool** — `dotnet tool install -g Scry.Cli` (requires ASP.NET Core 10 runtime).
+- **Install option 2: Self-contained** — Download a per-RID zip from [GitHub Releases](https://github.com/acrrd/scry/releases) and extract it.
+- **Development option** — Build locally: `dotnet build scry.slnx`. The single `scry` executable lands under `src/Scry.Client/bin/<config>/net10.0/`.
+- **dotnet-dump** tool (for collecting fixture dumps): `dotnet tool install -g dotnet-dump`.
 
 ## Concepts
 
-- **One host per dump.** A `scryd` process serves exactly one dump. The endpoint it listens on is
+- **One host per dump.** A host process serves exactly one dump. The endpoint it listens on is
   derived from the dump path (`scry-<hash>`), so every `scry` command for that dump reaches the
   same host.
-- **Auto-spawn.** `scry analyze <dump>` spawns the host if needed and polls for readiness. No
-  manual host startup required.
+- **Auto-spawn.** `scry analyze <dump>` spawns the host (itself in internal `__host` mode) if needed
+  and polls for readiness. No manual startup required.
 - **Transport.** A named pipe on Windows, a Unix domain socket on Linux/macOS. No TCP port.
 - **Output.** Every command prints JSON to stdout. Failures print a JSON `error` object and exit
   non-zero.
@@ -48,8 +48,8 @@ scry analyze C:\Users\...\AppData\Local\Temp\scry-fixture-1234-20260611-143022.d
 }
 ```
 
-The client spawns `scryd`, loads the dump, and returns a handle. Subsequent commands default to
-this session and need no `--dump` argument.
+The `scry` CLI spawns itself in internal host mode (`scry __host ...`), loads the dump, and
+returns a handle. Subsequent commands default to this session and need no `--dump` argument.
 
 ## Walk managed thread stacks
 

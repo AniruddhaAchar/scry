@@ -1,0 +1,46 @@
+name: release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  self-contained-zips:
+    strategy:
+      matrix:
+        rid: [win-x64, win-arm64, linux-x64, linux-arm64, osx-arm64]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Publish self-contained
+        run: dotnet publish src/Scry.Client/Scry.Client.csproj -c Release -r ${{ matrix.rid }} --self-contained -o publish/${{ matrix.rid }}
+      - name: Zip
+        run: cd publish/${{ matrix.rid }} && zip -r ../../scry-${{ matrix.rid }}.zip .
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: scry-${{ matrix.rid }}.zip
+  tool-package:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Pack tool
+        run: dotnet pack src/Scry.Client/Scry.Client.csproj -c Release -o nupkg
+      # Publish to the GitHub Packages NuGet registry using the workflow's built-in
+      # GITHUB_TOKEN — no long-lived API key to maintain or leak. Install with:
+      #   dotnet tool install -g Scry.Cli \
+      #     --add-source https://nuget.pkg.github.com/<owner>/index.json
+      - name: Push to GitHub Packages
+        run: >
+          dotnet nuget push "nupkg/*.nupkg"
+          --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+          --api-key ${{ secrets.GITHUB_TOKEN }}
+          --skip-duplicate

@@ -1,6 +1,14 @@
 using System.CommandLine;
 using Microsoft.Extensions.DependencyInjection;
 using Scry.Client;
+using Scry.Host;
+
+// Hidden daemon mode: `scry __host --dump ...` runs the gRPC host (ADR 0007).
+// Not registered as a subcommand, so it never appears in --help.
+if (args.Length > 0 && args[0] == "__host")
+{
+    return await HostMode.RunAsync(args[1..]);
+}
 
 // Global --verbose / -v (recursive so it is visible on all subcommands).
 var verboseOption = new Option<bool>("--verbose", "-v")

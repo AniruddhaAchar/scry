@@ -1,23 +1,33 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- scry — the short-lived CLI an agent invokes per command. Connects to (or,
-       from M1, spawns) the scryd host for a dump, issues one RPC, prints JSON. -->
+  <!-- scry — the single exe for both CLI and daemon modes. See docs/adr/0007. -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <AssemblyName>scry</AssemblyName>
     <RootNamespace>Scry.Client</RootNamespace>
+
+    <!-- Distribution: .NET global tool (see docs/adr/0007). -->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>scry</ToolCommandName>
+    <PackageId>Scry.Cli</PackageId>
+    <!-- Version comes from Directory.Build.props (single source of truth). -->
+    <Authors>Aniruddha Achar</Authors>
+    <Description>Structured, JSON-emitting .NET memory-dump analyzer for AI agents (ClrMD-based).</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- DI + Logging come from the Microsoft.AspNetCore.App shared framework (host mode
+         hosts Kestrel), so they must NOT also be PackageReferenced here (NU1510). -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Grpc.Net.Client" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
-    <PackageReference Include="Microsoft.Extensions.Logging" />
     <PackageReference Include="System.CommandLine" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Scry.Contracts\Scry.Contracts.csproj" />
     <ProjectReference Include="..\Scry.Core\Scry.Core.csproj" />
+    <ProjectReference Include="..\Scry.Host\Scry.Host.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -302,21 +302,20 @@
           "xunit.v3.runner.common": "[3.2.2]"
         }
       },
-      "scry": {
-        "type": "Project",
-        "dependencies": {
-          "Grpc.Net.Client": "[2.80.0, )",
-          "Microsoft.Extensions.DependencyInjection": "[10.0.9, )",
-          "Microsoft.Extensions.Logging": "[10.0.9, )",
-          "Scry.Contracts": "[1.0.0, )",
-          "Scry.Core": "[1.0.0, )",
-          "System.CommandLine": "[2.0.9, )"
-        }
-      },
       "scry.analysis": {
         "type": "Project",
         "dependencies": {
           "Microsoft.Diagnostics.Runtime": "[3.1.512801, )"
+        }
+      },
+      "Scry.Cli": {
+        "type": "Project",
+        "dependencies": {
+          "Grpc.Net.Client": "[2.80.0, )",
+          "Scry.Contracts": "[1.0.0, )",
+          "Scry.Core": "[1.0.0, )",
+          "Scry.Host": "[1.0.0, )",
+          "System.CommandLine": "[2.0.9, )"
         }
       },
       "scry.contracts": {
@@ -332,7 +331,7 @@
           "Microsoft.Extensions.Logging": "[10.0.9, )"
         }
       },
-      "scryd": {
+      "scry.host": {
         "type": "Project",
         "dependencies": {
           "Grpc.AspNetCore": "[2.80.0, )",
