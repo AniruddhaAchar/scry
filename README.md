@@ -4,9 +4,11 @@ A [ClrMD](https://github.com/microsoft/clrmd)-based .NET memory-dump analyzer **
 returns **structured JSON**, not human-readable SOS text, so an agent can chain analysis steps
 (`stat` → list of a type → dump an object → walk roots) without scraping a debugger's console.
 
-> **Status: v0.0.1, milestone M3 (heap walks).** The session model (`analyze`/`ps`/`health`/
-> `stop`/`kill`), auto-spawn, logging, dump loading, managed thread stacks (`stack`), and heap
-> analysis (`dumpheap`, `dumpexceptions`, `printexception`) are in place. See [the roadmap](CLAUDE.md#milestones).
+> **Status: v0.0.1.** A single-binary CLI + daemon with: the session model (`analyze`/`ps`/
+> `health`/`stop`/`kill`), file logging, ClrMD dump loading, managed thread stacks (`stack`), heap
+> analysis (`dumpheap`/`dumpexceptions`/`printexception`), object & array inspection
+> (`dumpobject`/`dumparray`), and tag-driven distribution (global tool + per-RID zips).
+> See [the roadmap](CLAUDE.md#milestones).
 
 ## How it works
 
@@ -35,7 +37,7 @@ scry analyze /path/to/app.dmp
 
 ### Self-contained zips (no runtime required)
 
-Download pre-built per-RID archives from [GitHub Releases](https://github.com/acrrd/scry/releases).
+Download pre-built per-RID archives from [GitHub Releases](https://github.com/AniruddhaAchar/scry/releases).
 Unzip and run the `scry` executable directly.
 
 ## Quickstart (development)
@@ -79,7 +81,9 @@ $SCRY stack --thread 1234
 $SCRY dumpheap                          # heap statistics
 $SCRY dumpheap --type System.String     # objects of a type, paged
 $SCRY dumpexceptions                    # live exceptions
-$SCRY printexception --address 0xabc123 # detail for one exception
+$SCRY printexception --address 0xCAFEBABE # detail for one exception
+$SCRY dumpobject --address 0xFACADE     # inspect an object's fields
+$SCRY dumparray --address 0xC0FFEE      # walk an array's elements, paged
 
 # Query health (no --dump needed — defaults to single active session):
 $SCRY health

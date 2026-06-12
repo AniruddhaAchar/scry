@@ -27,6 +27,11 @@ service Scry {
 
   // Full detail for one exception object by address, including its reconstructed stack trace.
   rpc PrintException(PrintExceptionRequest) returns (PrintExceptionResponse);
+
+  // Dump one object's fields by address (SOS !DumpObj analog).
+  rpc DumpObject(DumpObjectRequest) returns (DumpObjectResponse);
+  // Dump an array's elements by address, paged (SOS !DumpArray analog).
+  rpc DumpArray(DumpArrayRequest) returns (DumpArrayResponse);
 }
 
 message HealthRequest {}
@@ -104,3 +109,26 @@ message PrintExceptionResponse {
   ExceptionInfo exception = 2;
   repeated StackFrame stack_trace = 3;   // reuses the existing StackFrame message
 }
+
+message DumpObjectRequest { uint64 address = 1; }
+message DumpObjectResponse {
+  bool   found = 1;
+  uint64 address = 2;
+  string type = 3;
+  uint64 method_table = 4;
+  uint64 size = 5;
+  repeated ObjectField fields = 6;
+}
+message ObjectField { string name = 1; string type = 2; int32 offset = 3; string value = 4; }
+
+message DumpArrayRequest { uint64 address = 1; int32 limit = 2; int32 offset = 3; }
+message DumpArrayResponse {
+  bool   found = 1;
+  uint64 address = 2;
+  string type = 3;
+  string element_type = 4;
+  int32  length = 5;
+  bool   truncated = 6;
+  repeated ArrayElement elements = 7;
+}
+message ArrayElement { int32 index = 1; string value = 2; }

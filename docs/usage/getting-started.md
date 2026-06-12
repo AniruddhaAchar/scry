@@ -206,6 +206,70 @@ scry printexception --address 0x7f9a0000abcd
 The stack trace captures the reconstructed managed call stack at the point where the exception
 was thrown.
 
+### Object inspection
+
+```bash
+scry dumpobject --address 0x7f9a00001234
+```
+
+```json
+{
+  "found": true,
+  "address": "0x7f9a00001234",
+  "type": "System.String",
+  "methodTable": "0x7f9a12345678",
+  "size": 36,
+  "fields": [
+    {
+      "name": "_length",
+      "type": "System.Int32",
+      "offset": 8,
+      "value": "5"
+    },
+    {
+      "name": "_firstChar",
+      "type": "System.Char",
+      "offset": 12,
+      "value": "\"Hello\""
+    }
+  ]
+}
+```
+
+Walk an object's fields by address (similar to SOS `!DumpObj`). Returns `{ "found": false }` if the
+address is not a valid object. Use `dumpheap --type` to find object addresses.
+
+### Array inspection (paged)
+
+```bash
+scry dumparray --address 0x7f9a00005678 --limit 10
+```
+
+```json
+{
+  "found": true,
+  "address": "0x7f9a00005678",
+  "type": "System.Int32[]",
+  "elementType": "System.Int32",
+  "length": 100,
+  "truncated": true,
+  "elements": [
+    {
+      "index": 0,
+      "value": "42"
+    },
+    {
+      "index": 1,
+      "value": "99"
+    }
+  ]
+}
+```
+
+Walk an array's elements by address, paged (similar to SOS `!DumpArray`). Like `dumpheap`, it
+returns element values truncated to a maximum length and quoted. Returns `{ "found": false }` if
+the address is not a valid array. Use `--limit` and `--offset` for pagination.
+
 ## Session management
 
 ```bash

@@ -125,6 +125,21 @@ try {
         if ($r.found) { throw 'expected found:false for a String address' }
     }
 
+    Step 'dumpobject (object fields)' {
+        $r = Run @('dumpobject', '--address', $script:strAddr) | ConvertFrom-Json
+        if (-not $r.found) { throw "expected found:true for $($script:strAddr)" }
+        if ($r.fields.Count -lt 1) { throw 'no fields' }
+        Write-Host "  type=$($r.type) fields=$($r.fields.Count)"
+    }
+
+    Step 'dumparray (array elements)' {
+        $arr = (Run @('dumpheap', '--type', 'System.Object[]', '--limit', '1') | ConvertFrom-Json).objects
+        if (-not $arr -or $arr.Count -lt 1) { Write-Host '  (no Object[] in this dump; skipping)'; return }
+        $r = Run @('dumparray', '--address', $arr[0].address, '--limit', '5') | ConvertFrom-Json
+        if (-not $r.found) { throw "expected found:true for an array address" }
+        Write-Host "  type=$($r.type) elementType=$($r.elementType) length=$($r.length)"
+    }
+
     Step 'no pipe-hang (dumpheap | Out-String returns promptly)' {
         $sw = [Diagnostics.Stopwatch]::StartNew()
         & $Scry dumpheap | Out-String | Out-Null

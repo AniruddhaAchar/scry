@@ -198,4 +198,66 @@ public sealed class ScryServiceImpl(
 
         return response;
     }
+
+    public override async Task<DumpObjectResponse> DumpObject(DumpObjectRequest request, ServerCallContext context)
+    {
+        activity.Touch();
+        RequireReady();
+
+        var dump = await worker.RunAsync(new DumpObjectCommand(request.Address), context.CancellationToken);
+        if (dump is null)
+        {
+            return new DumpObjectResponse { Found = false };
+        }
+
+        var response = new DumpObjectResponse
+        {
+            Found = true,
+            Address = dump.Address,
+            Type = dump.Type,
+            MethodTable = dump.MethodTable,
+            Size = dump.Size,
+        };
+        foreach (var f in dump.Fields)
+        {
+            response.Fields.Add(new ObjectField
+            {
+                Name = f.Name,
+                Type = f.Type,
+                Offset = f.Offset,
+                Value = f.Value ?? string.Empty,
+            });
+        }
+
+        return response;
+    }
+
+    public override async Task<DumpArrayResponse> DumpArray(DumpArrayRequest request, ServerCallContext context)
+    {
+        activity.Touch();
+        RequireReady();
+
+        var dump = await worker.RunAsync(
+            new DumpArrayCommand(request.Address, request.Offset, request.Limit), context.CancellationToken);
+        if (dump is null)
+        {
+            return new DumpArrayResponse { Found = false };
+        }
+
+        var response = new DumpArrayResponse
+        {
+            Found = true,
+            Address = dump.Address,
+            Type = dump.Type,
+            ElementType = dump.ElementType,
+            Length = dump.Length,
+            Truncated = dump.Truncated,
+        };
+        foreach (var e in dump.Elements)
+        {
+            response.Elements.Add(new ArrayElement { Index = e.Index, Value = e.Value ?? string.Empty });
+        }
+
+        return response;
+    }
 }

@@ -121,5 +121,8 @@ src/Scry.Contracts/
   packaging, self-contained per-RID zips, tag-triggered release CI. Symbol path config. See
   [ADR 0007](docs/adr/0007-single-binary-and-distribution.md) and
   [ADR 0008](docs/adr/0008-dac-and-symbol-resolution.md).
-- **M5 — collections:** `DumpConcurrentDictionary`, `DumpConcurrentQueue`.
-- **M6 — hardening:** error-model polish, limit caps, broader cross-platform DAC robustness.
+- **M5 — object inspection (done):** `DumpObject` (walk an object's fields), `DumpArray` (paged
+  array element listing). Both return `{ "found": false }` for invalid addresses. Unit tests and
+  smoke test integration complete.
+- **M6 — collections:** `DumpConcurrentDictionary`, `DumpConcurrentQueue`.
+- **M7 — hardening:** error-model polish, limit caps, broader cross-platform DAC robustness.

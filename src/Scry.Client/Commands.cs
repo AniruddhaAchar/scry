@@ -423,7 +423,7 @@ internal sealed class ScryCommands(ILogger<ScryCommands> logger)
         if (!TryParseAddress(addressText, out var address))
         {
             return JsonOut.WriteError(new CliError(
-                "INVALID_ARGUMENT", $"--address is required; could not parse '{addressText}' (expected hex, e.g. 0x7ff...)"));
+                "INVALID_ARGUMENT", $"--address is required; could not parse '{addressText}' (expected hex, e.g. 0xDEADBEEF)"));
         }
 
         var resolveResult = ResolveTarget(handle, dumpPath: null);
@@ -478,6 +478,129 @@ internal sealed class ScryCommands(ILogger<ScryCommands> logger)
         catch (Exception ex)
         {
             logger.LogWarning(ex, "printexception RPC failed for {Handle}", target);
+            return JsonOut.WriteError(ConnectError(ex, target));
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // dumpobject
+    // -------------------------------------------------------------------------
+
+    public async Task<int> DumpObjectAsync(
+        string? handle, string? addressText, int timeoutSeconds, CancellationToken ct)
+    {
+        if (!TryParseAddress(addressText, out var address))
+        {
+            return JsonOut.WriteError(new CliError(
+                "INVALID_ARGUMENT", $"--address is required; could not parse '{addressText}' (expected hex, e.g. 0xDEADBEEF)"));
+        }
+
+        var resolveResult = ResolveTarget(handle, dumpPath: null);
+        if (resolveResult.Error is not null)
+        {
+            return JsonOut.WriteError(resolveResult.Error);
+        }
+
+        var target = resolveResult.Handle!;
+        logger.LogInformation("dumpobject: handle={Handle} address=0x{Address:x}", target, address);
+
+        try
+        {
+            using var channel = ScryChannel.ForEndpoint(target);
+            var client = new ScryGrpc.ScryClient(channel);
+            using var cts = LinkTimeout(ct, timeoutSeconds);
+            var response = await client.DumpObjectAsync(
+                new DumpObjectRequest { Address = address }, cancellationToken: cts.Token);
+
+            if (!response.Found)
+            {
+                JsonOut.Write(new { handle = target, address = $"0x{address:x}", found = false });
+                return 0;
+            }
+
+            JsonOut.Write(new
+            {
+                handle = target,
+                found = true,
+                address = $"0x{response.Address:x}",
+                type = response.Type,
+                methodTable = $"0x{response.MethodTable:x}",
+                size = response.Size,
+                fields = response.Fields.Select(f => new
+                {
+                    name = f.Name,
+                    type = f.Type,
+                    offset = f.Offset,
+                    value = string.IsNullOrEmpty(f.Value) ? null : f.Value,
+                }).ToArray(),
+            });
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "dumpobject RPC failed for {Handle}", target);
+            return JsonOut.WriteError(ConnectError(ex, target));
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // dumparray
+    // -------------------------------------------------------------------------
+
+    public async Task<int> DumpArrayAsync(
+        string? handle, string? addressText, int limit, int offset, int timeoutSeconds, CancellationToken ct)
+    {
+        if (!TryParseAddress(addressText, out var address))
+        {
+            return JsonOut.WriteError(new CliError(
+                "INVALID_ARGUMENT", $"--address is required; could not parse '{addressText}' (expected hex, e.g. 0xDEADBEEF)"));
+        }
+
+        var resolveResult = ResolveTarget(handle, dumpPath: null);
+        if (resolveResult.Error is not null)
+        {
+            return JsonOut.WriteError(resolveResult.Error);
+        }
+
+        var target = resolveResult.Handle!;
+        logger.LogInformation("dumparray: handle={Handle} address=0x{Address:x}", target, address);
+
+        try
+        {
+            using var channel = ScryChannel.ForEndpoint(target);
+            var client = new ScryGrpc.ScryClient(channel);
+            using var cts = LinkTimeout(ct, timeoutSeconds);
+            var response = await client.DumpArrayAsync(
+                new DumpArrayRequest { Address = address, Limit = limit, Offset = offset }, cancellationToken: cts.Token);
+
+            if (!response.Found)
+            {
+                JsonOut.Write(new { handle = target, address = $"0x{address:x}", found = false });
+                return 0;
+            }
+
+            JsonOut.Write(new
+            {
+                handle = target,
+                found = true,
+                address = $"0x{response.Address:x}",
+                type = response.Type,
+                elementType = response.ElementType,
+                length = response.Length,
+                truncated = response.Truncated,
+                offset,
+                limit,
+                elements = response.Elements.Select(e => new
+                {
+                    index = e.Index,
+                    value = string.IsNullOrEmpty(e.Value) ? null : e.Value,
+                }).ToArray(),
+            });
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "dumparray RPC failed for {Handle}", target);
             return JsonOut.WriteError(ConnectError(ex, target));
         }
     }

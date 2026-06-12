@@ -248,7 +248,7 @@ dumpexCommand.SetAction(async (parseResult, ct) =>
 
 #region printexception
 var peHandleOption = new Option<string?>("--handle") { Description = "Explicit session handle." };
-var peAddressOption = new Option<string?>("--address") { Description = "Exception object address (hex, e.g. 0x7ff...)." };
+var peAddressOption = new Option<string?>("--address") { Description = "Exception object address (hex, e.g. 0xCAFEBABE)." };
 var peTimeoutOption = new Option<int>("--timeout") { Description = "RPC timeout in seconds (0 = none).", DefaultValueFactory = _ => 10 };
 var peCommand = new Command("printexception", "Full detail for one exception by address, including its stack trace.");
 peCommand.Options.Add(peHandleOption);
@@ -265,6 +265,50 @@ peCommand.SetAction(async (parseResult, ct) =>
 });
 #endregion
 
+#region dumpobject
+var doHandleOption = new Option<string?>("--handle") { Description = "Explicit session handle." };
+var doAddressOption = new Option<string?>("--address") { Description = "Object address (hex, e.g. 0xFACADE)." };
+var doTimeoutOption = new Option<int>("--timeout") { Description = "RPC timeout in seconds (0 = none).", DefaultValueFactory = _ => 10 };
+var dumpobjectCommand = new Command("dumpobject", "Dump an object's fields by address.");
+dumpobjectCommand.Options.Add(doHandleOption);
+dumpobjectCommand.Options.Add(doAddressOption);
+dumpobjectCommand.Options.Add(doTimeoutOption);
+dumpobjectCommand.SetAction(async (parseResult, ct) =>
+{
+    await using var sp = Bootstrap.Build(parseResult.GetValue(verboseOption));
+    return await sp.GetRequiredService<ScryCommands>().DumpObjectAsync(
+        parseResult.GetValue(doHandleOption),
+        parseResult.GetValue(doAddressOption),
+        parseResult.GetValue(doTimeoutOption),
+        ct);
+});
+#endregion
+
+#region dumparray
+var daHandleOption = new Option<string?>("--handle") { Description = "Explicit session handle." };
+var daAddressOption = new Option<string?>("--address") { Description = "Array address (hex, e.g. 0xC0FFEE)." };
+var daLimitOption = new Option<int>("--limit") { Description = "Max elements per page.", DefaultValueFactory = _ => 1000 };
+var daOffsetOption = new Option<int>("--offset") { Description = "Element page offset.", DefaultValueFactory = _ => 0 };
+var daTimeoutOption = new Option<int>("--timeout") { Description = "RPC timeout in seconds (0 = none).", DefaultValueFactory = _ => 30 };
+var dumparrayCommand = new Command("dumparray", "Dump an array's elements by address (paged).");
+dumparrayCommand.Options.Add(daHandleOption);
+dumparrayCommand.Options.Add(daAddressOption);
+dumparrayCommand.Options.Add(daLimitOption);
+dumparrayCommand.Options.Add(daOffsetOption);
+dumparrayCommand.Options.Add(daTimeoutOption);
+dumparrayCommand.SetAction(async (parseResult, ct) =>
+{
+    await using var sp = Bootstrap.Build(parseResult.GetValue(verboseOption));
+    return await sp.GetRequiredService<ScryCommands>().DumpArrayAsync(
+        parseResult.GetValue(daHandleOption),
+        parseResult.GetValue(daAddressOption),
+        parseResult.GetValue(daLimitOption),
+        parseResult.GetValue(daOffsetOption),
+        parseResult.GetValue(daTimeoutOption),
+        ct);
+});
+#endregion
+
 #region root
 
 var root = new RootCommand("scry — structured .NET dump analysis for AI agents.");
@@ -276,6 +320,8 @@ root.Subcommands.Add(stackCommand);
 root.Subcommands.Add(dumpheapCommand);
 root.Subcommands.Add(dumpexCommand);
 root.Subcommands.Add(peCommand);
+root.Subcommands.Add(dumpobjectCommand);
+root.Subcommands.Add(dumparrayCommand);
 root.Subcommands.Add(stopCommand);
 root.Subcommands.Add(killCommand);
 
