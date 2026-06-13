@@ -11,7 +11,7 @@
 
   Steps: analyze -> ps -> health -> stack -> clrthreads -> dumpheap (stat) ->
   dumpheap --type (paged) -> dumpexceptions -> printexception (found + not-found) ->
-  dumpobject -> dumparray -> gcroot -> pipe-hang check -> stop.
+  dumpobject -> dumparray -> gcroot -> syncblk -> dumpasync -> pipe-hang check -> stop.
   Exits non-zero if any step fails. Always stops the session and deletes the dump on exit.
 
 .PARAMETER Scry
@@ -159,6 +159,19 @@ try {
     Step 'gcroot (invalid address => found:false)' {
         $r = Run @('gcroot', '--address', '0xdeadbeef') | ConvertFrom-Json
         if ($r.found) { throw 'expected found:false for a bogus address' }
+    }
+
+    Step 'syncblk (sync block listing)' {
+        # The generic victim may hold no contended monitors; assert shape, not contents.
+        $r = Run @('syncblk') | ConvertFrom-Json
+        if ($null -eq $r.blocks) { throw 'no blocks array' }
+        Write-Host "  monitorBlocks=$($r.blocks.Count)"
+    }
+
+    Step 'dumpasync (async state machines)' {
+        $r = Run @('dumpasync') | ConvertFrom-Json
+        if ($null -eq $r.machines) { throw 'no machines array' }
+        Write-Host "  totalMatches=$($r.totalMatches) returned=$($r.machines.Count)"
     }
 
     Step 'no pipe-hang (dumpheap | Out-String returns promptly)' {

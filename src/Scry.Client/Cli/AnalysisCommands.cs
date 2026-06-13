@@ -15,6 +15,8 @@ internal static class AnalysisCommands
         yield return DumpArray(verbose);
         yield return ClrThreads(verbose);
         yield return GcRoot(verbose);
+        yield return SyncBlk(verbose);
+        yield return DumpAsync(verbose);
     }
 
     private static Command Stack(Option<bool> verbose)
@@ -186,6 +188,46 @@ internal static class AnalysisCommands
                 pr.GetValue(handleOption),
                 pr.GetValue(address),
                 pr.GetValue(maxPaths),
+                pr.GetValue(timeout),
+                c), ct));
+        return cmd;
+    }
+
+    private static Command SyncBlk(Option<bool> verbose)
+    {
+        var handleArg = CliOptions.HandleArg();
+        var handleOption = CliOptions.HandleOption();
+        var timeout = CliOptions.TimeoutOption(10);
+        var cmd = new Command("syncblk", "List managed sync blocks (monitor owner, recursion, waiters) — deadlock triage.");
+        cmd.Arguments.Add(handleArg);
+        cmd.Options.Add(handleOption);
+        cmd.Options.Add(timeout);
+        cmd.SetAction((pr, ct) => CliRunner.Run(pr, verbose, (commands, c) =>
+            commands.SyncBlkAsync(
+                CliRunner.Handle(pr, handleArg, handleOption),
+                pr.GetValue(timeout),
+                c), ct));
+        return cmd;
+    }
+
+    private static Command DumpAsync(Option<bool> verbose)
+    {
+        var handleArg = CliOptions.HandleArg();
+        var handleOption = CliOptions.HandleOption();
+        var limit = CliOptions.LimitOption(1000, "Max async state machines per page.");
+        var offset = CliOptions.OffsetOption("Page offset.");
+        var timeout = CliOptions.TimeoutOption(30, "RPC timeout in seconds (0 = none). The first heap command warms a snapshot.");
+        var cmd = new Command("dumpasync", "List async state machines in flight (which methods are suspended, and where) — async-hang triage.");
+        cmd.Arguments.Add(handleArg);
+        cmd.Options.Add(handleOption);
+        cmd.Options.Add(limit);
+        cmd.Options.Add(offset);
+        cmd.Options.Add(timeout);
+        cmd.SetAction((pr, ct) => CliRunner.Run(pr, verbose, (commands, c) =>
+            commands.DumpAsyncAsync(
+                CliRunner.Handle(pr, handleArg, handleOption),
+                pr.GetValue(limit),
+                pr.GetValue(offset),
                 pr.GetValue(timeout),
                 c), ct));
         return cmd;

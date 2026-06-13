@@ -7,8 +7,9 @@ returns **structured JSON**, not human-readable SOS text, so an agent can chain 
 > **Status: v0.0.1.** A single-binary CLI + daemon with: the session model (`analyze`/`ps`/
 > `health`/`stop`/`kill`), file logging, ClrMD dump loading, managed thread stacks (`stack`), heap
 > analysis (`dumpheap`/`dumpexceptions`/`printexception`), object & array inspection
-> (`dumpobject`/`dumparray`), thread and root-path triage (`clrthreads`/`gcroot`), and
-> tag-driven distribution (global tool + per-RID zips).
+> (`dumpobject`/`dumparray`), thread, root-path, and concurrency triage
+> (`clrthreads`/`gcroot`/`syncblk`/`dumpasync`), and tag-driven distribution
+> (global tool + per-RID zips).
 > See [the roadmap](CLAUDE.md#milestones).
 
 ## How it works
@@ -80,6 +81,10 @@ $SCRY stack --thread 1234
 
 # Managed threads (state flags, GC mode, lock count, current exception):
 $SCRY clrthreads
+
+# Concurrency triage:
+$SCRY syncblk                           # held monitors + owner/waiters (deadlocks)
+$SCRY dumpasync                          # async state machines in flight (async hangs)
 
 # Heap queries (the first heap command warms a one-time in-memory snapshot):
 $SCRY dumpheap                          # heap statistics

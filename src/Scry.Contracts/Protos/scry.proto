@@ -37,6 +37,11 @@ service Scry {
   rpc ClrThreads(ClrThreadsRequest) returns (ClrThreadsResponse);
   // Find GC root paths that keep an object alive (SOS !GCRoot analog).
   rpc GcRoot(GcRootRequest) returns (GcRootResponse);
+
+  // List managed sync blocks: monitor owner, recursion, waiters (SOS !SyncBlk analog).
+  rpc SyncBlk(SyncBlkRequest) returns (SyncBlkResponse);
+  // List async state machines in flight on the heap, paged (SOS !DumpAsync analog).
+  rpc DumpAsync(DumpAsyncRequest) returns (DumpAsyncResponse);
 }
 
 message HealthRequest {}
@@ -170,3 +175,33 @@ message GcRootPath {
   repeated GcRootNode chain = 4;  // root object → ... → target
 }
 message GcRootNode { uint64 address = 1; string type = 2; }
+
+message SyncBlkRequest {}
+message SyncBlkResponse { repeated SyncBlock blocks = 1; }
+message SyncBlock {
+  int32  index = 1;
+  uint64 object_address = 2;
+  string object_type = 3;
+  bool   monitor_held = 4;
+  uint64 owning_thread_address = 5;
+  uint32 owning_os_thread_id = 6;       // 0 if the owner thread wasn't resolved
+  int32  owning_managed_thread_id = 7;
+  int32  recursion_count = 8;
+  int32  waiting_thread_count = 9;
+}
+
+message DumpAsyncRequest { int32 limit = 1; int32 offset = 2; }
+message DumpAsyncResponse {
+  repeated AsyncStateMachine machines = 1;
+  int64  total_matches = 2;
+  bool   truncated = 3;
+}
+message AsyncStateMachine {
+  uint64 address = 1;
+  string type = 2;          // the user's async method state-machine type
+  int32  state = 3;         // <>1__state; only meaningful when has_state
+  bool   has_state = 4;
+  string status = 5;        // "suspended at await N" / "running" / "completed" / "unknown"
+  uint64 continuation_address = 6;
+  string continuation_type = 7;
+}

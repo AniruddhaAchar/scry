@@ -341,6 +341,72 @@ isn't a valid object. This walks a reverse object graph over the whole heap and 
 expensive command, so it defaults to **one** path (`--max-paths` raises the cap; `truncated`
 signals more paths exist) and to a longer 120s timeout.
 
+## Concurrency
+
+### Sync blocks (monitor-based deadlocks)
+
+```bash
+scry syncblk
+```
+
+```json
+{
+  "blocks": [
+    {
+      "index": 2,
+      "objectAddress": "0x273fb009f30",
+      "objectType": "System.Object",
+      "monitorHeld": true,
+      "owner": { "threadAddress": "0x273923212f0", "osThreadId": 35460, "managedThreadId": 7 },
+      "recursionCount": 1,
+      "waitingThreadCount": 1
+    }
+  ]
+}
+```
+
+Lists the managed sync blocks acting as live monitors (the records behind `lock`/`Monitor`),
+similar to SOS `!SyncBlk`. Each entry names the locked object, the **owning** thread (`null`
+when unowned), the lock recursion depth, and how many threads are **waiting**. To find a
+deadlock, cross-reference an owner/waiter id with `clrthreads` + `stack <tid>`. Blocks allocated
+for non-monitor reasons (hashcode, COM interop) are filtered out — their monitor fields are
+uninitialized noise.
+
+### Async state machines (async hangs)
+
+```bash
+scry dumpasync
+```
+
+```json
+{
+  "totalMatches": 2,
+  "truncated": false,
+  "machines": [
+    {
+      "address": "0x2a84040a2e8",
+      "type": "App.Worker+<RunAsync>d__3",
+      "state": 0,
+      "status": "suspended at await 0"
+    },
+    {
+      "address": "0x2a84040a448",
+      "type": "App.Program+<Main>d__2",
+      "state": -1,
+      "status": "running",
+      "continuation": { "address": "0x2a84040b810", "type": "System.Threading.Tasks.Task+SetOnInvokeMres" }
+    }
+  ]
+}
+```
+
+Lists the `async` methods in flight on the heap — the boxed state machines the runtime keeps
+alive while they await (similar to SOS `!DumpAsync`). `type` is the user's async method; `state`
+is the compiler's `<>1__state` counter, rendered by `status`: **`suspended at await N`** (the
+method is parked at that await — the smoking gun for an async hang), `running` (`-1`), or
+`completed` (`-2`). `continuation`, when present, is the next object resumed when this one
+finishes. Paged via `--limit`/`--offset`; like `dumpheap`, the first call warms the heap snapshot.
+
 ## Session management
 
 ```bash

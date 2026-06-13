@@ -336,4 +336,57 @@ public sealed class ScryServiceImpl(
 
         return response;
     }
+
+    public override async Task<SyncBlkResponse> SyncBlk(SyncBlkRequest request, ServerCallContext context)
+    {
+        activity.Touch();
+        RequireReady();
+
+        var blocks = await worker.RunAsync(new SyncBlkCommand(), context.CancellationToken);
+
+        var response = new SyncBlkResponse();
+        foreach (var b in blocks)
+        {
+            response.Blocks.Add(new SyncBlock
+            {
+                Index = b.Index,
+                ObjectAddress = b.ObjectAddress,
+                ObjectType = b.ObjectType ?? string.Empty,
+                MonitorHeld = b.MonitorHeld,
+                OwningThreadAddress = b.OwningThreadAddress,
+                OwningOsThreadId = b.OwningOsThreadId ?? 0,
+                OwningManagedThreadId = b.OwningManagedThreadId ?? 0,
+                RecursionCount = b.RecursionCount,
+                WaitingThreadCount = b.WaitingThreadCount,
+            });
+        }
+
+        return response;
+    }
+
+    public override async Task<DumpAsyncResponse> DumpAsync(DumpAsyncRequest request, ServerCallContext context)
+    {
+        activity.Touch();
+        RequireReady();
+
+        var page = await worker.RunAsync(
+            new DumpAsyncCommand(request.Offset, request.Limit), context.CancellationToken);
+
+        var response = new DumpAsyncResponse { TotalMatches = page.TotalMatches, Truncated = page.Truncated };
+        foreach (var m in page.Items)
+        {
+            response.Machines.Add(new AsyncStateMachine
+            {
+                Address = m.Address,
+                Type = m.Type,
+                State = m.State ?? 0,
+                HasState = m.State.HasValue,
+                Status = m.Status,
+                ContinuationAddress = m.ContinuationAddress,
+                ContinuationType = m.ContinuationType ?? string.Empty,
+            });
+        }
+
+        return response;
+    }
 }

@@ -725,6 +725,109 @@ internal sealed class ScryCommands(ILogger<ScryCommands> logger)
     }
 
     // -------------------------------------------------------------------------
+    // syncblk
+    // -------------------------------------------------------------------------
+
+    public async Task<int> SyncBlkAsync(string? handle, int timeoutSeconds, CancellationToken ct)
+    {
+        var resolveResult = ResolveTarget(handle, dumpPath: null);
+        if (resolveResult.Error is not null)
+        {
+            return JsonOut.WriteError(resolveResult.Error);
+        }
+
+        var target = resolveResult.Handle!;
+        logger.LogInformation("syncblk: handle={Handle}", target);
+
+        try
+        {
+            using var channel = ScryChannel.ForEndpoint(target);
+            var client = new ScryGrpc.ScryClient(channel);
+            using var cts = LinkTimeout(ct, timeoutSeconds);
+            var response = await client.SyncBlkAsync(new SyncBlkRequest(), cancellationToken: cts.Token);
+
+            JsonOut.Write(new
+            {
+                handle = target,
+                blocks = response.Blocks.Select(b => new
+                {
+                    index = b.Index,
+                    objectAddress = $"0x{b.ObjectAddress:x}",
+                    objectType = string.IsNullOrEmpty(b.ObjectType) ? null : b.ObjectType,
+                    monitorHeld = b.MonitorHeld,
+                    owner = b.OwningThreadAddress == 0 ? null : new
+                    {
+                        threadAddress = $"0x{b.OwningThreadAddress:x}",
+                        osThreadId = b.OwningOsThreadId == 0 ? (uint?)null : b.OwningOsThreadId,
+                        managedThreadId = b.OwningManagedThreadId == 0 ? (int?)null : b.OwningManagedThreadId,
+                    },
+                    recursionCount = b.RecursionCount,
+                    waitingThreadCount = b.WaitingThreadCount,
+                }).ToArray(),
+            });
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "syncblk RPC failed for {Handle}", target);
+            return JsonOut.WriteError(ConnectError(ex, target));
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // dumpasync
+    // -------------------------------------------------------------------------
+
+    public async Task<int> DumpAsyncAsync(
+        string? handle, int limit, int offset, int timeoutSeconds, CancellationToken ct)
+    {
+        var resolveResult = ResolveTarget(handle, dumpPath: null);
+        if (resolveResult.Error is not null)
+        {
+            return JsonOut.WriteError(resolveResult.Error);
+        }
+
+        var target = resolveResult.Handle!;
+        logger.LogInformation("dumpasync: handle={Handle}", target);
+
+        try
+        {
+            using var channel = ScryChannel.ForEndpoint(target);
+            var client = new ScryGrpc.ScryClient(channel);
+            using var cts = LinkTimeout(ct, timeoutSeconds);
+            var response = await client.DumpAsyncAsync(
+                new DumpAsyncRequest { Limit = limit, Offset = offset }, cancellationToken: cts.Token);
+
+            JsonOut.Write(new
+            {
+                handle = target,
+                totalMatches = response.TotalMatches,
+                truncated = response.Truncated,
+                offset,
+                limit,
+                machines = response.Machines.Select(m => new
+                {
+                    address = $"0x{m.Address:x}",
+                    type = m.Type,
+                    state = m.HasState ? m.State : (int?)null,
+                    status = m.Status,
+                    continuation = m.ContinuationAddress == 0 ? null : new
+                    {
+                        address = $"0x{m.ContinuationAddress:x}",
+                        type = string.IsNullOrEmpty(m.ContinuationType) ? null : m.ContinuationType,
+                    },
+                }).ToArray(),
+            });
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "dumpasync RPC failed for {Handle}", target);
+            return JsonOut.WriteError(ConnectError(ex, target));
+        }
+    }
+
+    // -------------------------------------------------------------------------
     // stop
     // -------------------------------------------------------------------------
 

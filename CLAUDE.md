@@ -128,6 +128,11 @@ src/Scry.Contracts/
   lock count, current exception — SOS `!Threads`) and `GcRoot` (root-path-to-object via ClrMD
   `GCRoot`, paged by `--max-paths` — SOS `!GCRoot`). The two highest-leverage gaps vs.
   `dotnet-dump analyze` for leak/hang triage; concurrent-collection dumpers were deprioritized.
+- **M6b — concurrency triage (done):** `SyncBlk` (held monitors + owner/recursion/waiters via
+  `heap.EnumerateSyncBlocks`, filtered to live monitors — SOS `!SyncBlk`) and `DumpAsync` (async
+  state machines in flight: cracks `AsyncStateMachineBox` objects for the user method type +
+  `<>1__state` await point, best-effort continuation hop, paged off the snapshot — SOS
+  `!DumpAsync`). Closes the deadlock / async-hang gaps surfaced by [issue #1](https://github.com/AniruddhaAchar/scry/issues/1).
 - **M7 — hardening:** error-model polish, limit caps, broader cross-platform DAC robustness.
 - **Backlog (deprioritized):** concurrent collections (`DumpConcurrentDictionary`/
-  `DumpConcurrentQueue`), `dumpvc`, `dumpasync`, `syncblk`, SOS-name command aliases.
+  `DumpConcurrentQueue`), `dumpvc`, SOS-name command aliases.
