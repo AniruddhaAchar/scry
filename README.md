@@ -4,11 +4,12 @@ A [ClrMD](https://github.com/microsoft/clrmd)-based .NET memory-dump analyzer **
 returns **structured JSON**, not human-readable SOS text, so an agent can chain analysis steps
 (`stat` → list of a type → dump an object → walk roots) without scraping a debugger's console.
 
-> **Status: v0.0.1.** A single-binary CLI + daemon with: the session model (`analyze`/`ps`/
-> `health`/`stop`/`kill`), file logging, ClrMD dump loading, managed thread stacks (`stack`), heap
-> analysis (`dumpheap`/`dumpexceptions`/`printexception`), object & array inspection
-> (`dumpobject`/`dumparray`), thread, root-path, and concurrency triage
-> (`clrthreads`/`gcroot`/`syncblk`/`dumpasync`), and tag-driven distribution
+> **Status: v0.1.0** — first public release; feedback welcome. A single-binary CLI + daemon with:
+> the session model (`analyze`/`ps`/`health`/`stop`/`kill`), file logging, ClrMD dump loading,
+> managed thread stacks (`stack`), heap analysis (`dumpheap`/`dumpexceptions`/`printexception`),
+> object & array inspection (`dumpobject`/`dumparray`), thread, root-path, and concurrency triage
+> (`clrthreads`/`gcroot`/`syncblk`/`dumpasync`), an [agent skill](skills/scry/SKILL.md) (how to
+> drive scry + a bounded, give-up-aware reasoning loop), and tag-driven distribution
 > (global tool + per-RID zips).
 > See [the roadmap](CLAUDE.md#milestones).
 
@@ -130,8 +131,8 @@ The first `scry analyze` may take a moment as it downloads the DAC, but subseque
 same session reuse it. Offline or preview runtimes can be served via a `~/.scry/scry.config.json`
 symbol path.
 
-**Linux/macOS:** DAC acquisition is less turnkey; v0.0.1 supports local-machine dump analysis there,
-and broader cross-platform symbol robustness is deferred to a later milestone. See
+**Linux/macOS:** DAC acquisition is less turnkey; scry currently supports local-machine dump
+analysis there, and broader cross-platform symbol robustness is deferred to a later milestone. See
 [ADR 0008](docs/adr/0008-dac-and-symbol-resolution.md).
 
 ## Logging & config
