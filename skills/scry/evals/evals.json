@@ -1,0 +1,47 @@
+{
+  "skill_name": "scry-dump-analysis",
+  "notes": "Paths used at run time: SCRY_EXE=C:/Users/Aniru/SideProjects/scry/src/Scry.Client/bin/Debug/net10.0/scry.exe; fixtures under skills/scry-workspace/fixtures/. All three dumps contain 3 benign preallocated runtime exceptions (OutOfMemory/StackOverflow/ExecutionEngine, empty message, no faulting thread) — agents must not mistake these for a root cause.",
+  "evals": [
+    {
+      "id": 1,
+      "name": "hang-deadlock-and-async",
+      "prompt": "Our .NET background service stopped processing work and we had to restart it. I grabbed a memory dump while it was stuck. Figure out why it hung.",
+      "fixture": "hang.dmp",
+      "ground_truth": "Two real stuck conditions: (a) a contended monitor — one background thread owns a lock another thread waits on (syncblk shows monitorHeld + owner + waitingThreadCount>=1); (b) an async method <WorkAsync>d__N suspended at await 0 on a never-completing task (dumpasync shows status 'suspended at await 0'). A correct diagnosis names at least one with cited evidence and does not claim a crash/exception caused it.",
+      "assertions": [
+        "Classifies the symptom as a hang/deadlock or async stall, NOT a crash or memory leak",
+        "Cites concrete evidence: syncblk owner/waiter and/or a dumpasync 'suspended at await' machine",
+        "Names a correct root cause (contended monitor and/or parked async await)",
+        "Does not mistake the 3 preallocated runtime exceptions for the cause",
+        "Stays bounded: reaches a conclusion without re-running identical commands or exceeding ~12 scry commands"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "under-determined-idle",
+      "prompt": "Users reported the app felt sluggish around 2pm. I took a dump a bit later. Can you tell me what was slow?",
+      "fixture": "idle.dmp",
+      "ground_truth": "The dump is of a healthy, idle process: no faulting thread, no contended monitors, no suspended async machines, no dominant heap type. The only exceptions are the 3 benign preallocated runtime singletons (empty message, carried by no thread). The pathological 'slowness' is not present in this snapshot. Correct outcome is INSUFFICIENT with a recommendation to capture a dump during the slowness or a CPU trace.",
+      "assertions": [
+        "Reaches an INSUFFICIENT / not-enough-information conclusion rather than asserting a definite root cause",
+        "Explicitly recognizes the OutOfMemory/StackOverflow/ExecutionEngine exceptions as benign/preallocated and NOT the cause",
+        "Recommends the right next artifact (a dump taken during the slowness, and/or a CPU profiler/trace)",
+        "Stays bounded: does not loop or exceed the step budget chasing a non-existent cause"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "memory-leak-static-cache",
+      "prompt": "This service's memory keeps climbing until it gets OOM-killed. Here's a dump taken when it was near the top. What's leaking?",
+      "fixture": "leak.dmp",
+      "ground_truth": "The heap is dominated by System.Byte[] (~350 MB, hundreds of 1 MB arrays), all retained (gcroot rooted:true via a strong handle to a long-lived array/collection). Correct diagnosis: an unbounded collection of byte[] is the leak; cite dumpheap --stat (byte[] dominant) and gcroot (rooted:true) as evidence.",
+      "assertions": [
+        "Identifies System.Byte[] as the dominant heap type via dumpheap --stat",
+        "Runs gcroot on a representative object to establish it is retained (rooted:true)",
+        "Names the root cause as an unbounded/long-lived collection of byte[] (a leak), not transient pressure",
+        "Does not mistake the 3 preallocated runtime exceptions for the cause",
+        "Stays bounded: reaches the conclusion without re-running identical commands"
+      ]
+    }
+  ]
+}

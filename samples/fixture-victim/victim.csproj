@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Throwaway "victim" process used to generate fixture dumps for the scry skill evals
+    (and the issue #1 demo scenarios). Intentionally standalone — not part of scry.slnx,
+    so it builds/runs on its own and never affects the product build.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>victim</AssemblyName>
+  </PropertyGroup>
+
+</Project>

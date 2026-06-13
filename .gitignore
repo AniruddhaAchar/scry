@@ -32,4 +32,9 @@ Thumbs.db
 *.dump
 scratch/
 
+# Skill eval workspace: fixture dumps + scratch run outputs/benchmarks. The eval
+# *definitions* (skills/scry/evals/evals.json) and the fixture generator
+# (samples/fixture-victim) ARE committed; the generated dumps and run artifacts are not.
+skills/scry-workspace/
+
 # NOTE: packages.lock.json and global.json ARE committed (intentionally not ignored).
