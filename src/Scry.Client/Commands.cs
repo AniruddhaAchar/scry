@@ -606,6 +606,125 @@ internal sealed class ScryCommands(ILogger<ScryCommands> logger)
     }
 
     // -------------------------------------------------------------------------
+    // clrthreads
+    // -------------------------------------------------------------------------
+
+    public async Task<int> ClrThreadsAsync(string? handle, int timeoutSeconds, CancellationToken ct)
+    {
+        var resolveResult = ResolveTarget(handle, dumpPath: null);
+        if (resolveResult.Error is not null)
+        {
+            return JsonOut.WriteError(resolveResult.Error);
+        }
+
+        var target = resolveResult.Handle!;
+        logger.LogInformation("clrthreads: handle={Handle}", target);
+
+        try
+        {
+            using var channel = ScryChannel.ForEndpoint(target);
+            var client = new ScryGrpc.ScryClient(channel);
+            using var cts = LinkTimeout(ct, timeoutSeconds);
+            var response = await client.ClrThreadsAsync(new ClrThreadsRequest(), cancellationToken: cts.Token);
+
+            JsonOut.Write(new
+            {
+                handle = target,
+                threads = response.Threads.Select(t => new
+                {
+                    osThreadId = t.OsThreadId,
+                    managedThreadId = t.ManagedThreadId,
+                    isAlive = t.IsAlive,
+                    isBackground = t.IsBackground,
+                    isFinalizer = t.IsFinalizer,
+                    isGc = t.IsGc,
+                    gcMode = t.GcMode,
+                    // ClrMD reports uint.MaxValue when the lock count isn't tracked for the
+                    // thread; surface that as null rather than a misleading ~4 billion.
+                    lockCount = t.LockCount == uint.MaxValue ? (uint?)null : t.LockCount,
+                    state = t.State.ToArray(),
+                    currentException = t.CurrentException is null ? null : new
+                    {
+                        address = $"0x{t.CurrentException.Address:x}",
+                        type = t.CurrentException.Type,
+                        message = string.IsNullOrEmpty(t.CurrentException.Message) ? null : t.CurrentException.Message,
+                    },
+                }).ToArray(),
+            });
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "clrthreads RPC failed for {Handle}", target);
+            return JsonOut.WriteError(ConnectError(ex, target));
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // gcroot
+    // -------------------------------------------------------------------------
+
+    public async Task<int> GcRootAsync(
+        string? handle, string? addressText, int maxPaths, int timeoutSeconds, CancellationToken ct)
+    {
+        if (!TryParseAddress(addressText, out var address))
+        {
+            return JsonOut.WriteError(new CliError(
+                "INVALID_ARGUMENT", $"--address is required; could not parse '{addressText}' (expected hex, e.g. 0xDEADBEEF)"));
+        }
+
+        var resolveResult = ResolveTarget(handle, dumpPath: null);
+        if (resolveResult.Error is not null)
+        {
+            return JsonOut.WriteError(resolveResult.Error);
+        }
+
+        var target = resolveResult.Handle!;
+        logger.LogInformation("gcroot: handle={Handle} address=0x{Address:x} maxPaths={Max}", target, address, maxPaths);
+
+        try
+        {
+            using var channel = ScryChannel.ForEndpoint(target);
+            var client = new ScryGrpc.ScryClient(channel);
+            using var cts = LinkTimeout(ct, timeoutSeconds);
+            var response = await client.GcRootAsync(
+                new GcRootRequest { Address = address, MaxPaths = maxPaths }, cancellationToken: cts.Token);
+
+            if (!response.Found)
+            {
+                JsonOut.Write(new { handle = target, address = $"0x{address:x}", found = false });
+                return 0;
+            }
+
+            JsonOut.Write(new
+            {
+                handle = target,
+                found = true,
+                target = $"0x{response.Target:x}",
+                rooted = response.Rooted,
+                truncated = response.Truncated,
+                roots = response.Roots.Select(p => new
+                {
+                    rootKind = p.RootKind,
+                    rootAddress = $"0x{p.RootAddress:x}",
+                    stackFrame = string.IsNullOrEmpty(p.StackFrame) ? null : p.StackFrame,
+                    chain = p.Chain.Select(n => new
+                    {
+                        address = $"0x{n.Address:x}",
+                        type = string.IsNullOrEmpty(n.Type) ? null : n.Type,
+                    }).ToArray(),
+                }).ToArray(),
+            });
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "gcroot RPC failed for {Handle}", target);
+            return JsonOut.WriteError(ConnectError(ex, target));
+        }
+    }
+
+    // -------------------------------------------------------------------------
     // stop
     // -------------------------------------------------------------------------
 

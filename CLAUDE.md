@@ -124,5 +124,10 @@ src/Scry.Contracts/
 - **M5 — object inspection (done):** `DumpObject` (walk an object's fields), `DumpArray` (paged
   array element listing). Both return `{ "found": false }` for invalid addresses. Unit tests and
   smoke test integration complete.
-- **M6 — collections:** `DumpConcurrentDictionary`, `DumpConcurrentQueue`.
+- **M6 — thread & root triage (done):** `ClrThreads` (managed threads: state flags, GC mode,
+  lock count, current exception — SOS `!Threads`) and `GcRoot` (root-path-to-object via ClrMD
+  `GCRoot`, paged by `--max-paths` — SOS `!GCRoot`). The two highest-leverage gaps vs.
+  `dotnet-dump analyze` for leak/hang triage; concurrent-collection dumpers were deprioritized.
 - **M7 — hardening:** error-model polish, limit caps, broader cross-platform DAC robustness.
+- **Backlog (deprioritized):** concurrent collections (`DumpConcurrentDictionary`/
+  `DumpConcurrentQueue`), `dumpvc`, `dumpasync`, `syncblk`, SOS-name command aliases.

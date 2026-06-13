@@ -88,6 +88,40 @@ scry stack --thread 1234
 Each frame includes: kind (e.g. `ManagedMethod`), instruction pointer, stack pointer, managed
 method name, declaring type, and containing module.
 
+## Managed threads
+
+`stack` walks frames; `clrthreads` lists the threads themselves with their runtime state — the
+triage view SOS prints as `!Threads`.
+
+```bash
+scry clrthreads
+```
+
+```json
+{
+  "handle": "scry-58d03c61c2a27baf",
+  "threads": [
+    {
+      "osThreadId": 25940,
+      "managedThreadId": 2,
+      "isAlive": true,
+      "isBackground": false,
+      "isFinalizer": false,
+      "isGc": false,
+      "gcMode": "Preemptive",
+      "lockCount": null,
+      "state": ["TS_CoInitialized", "TS_InMTA"],
+      "currentException": null
+    }
+  ]
+}
+```
+
+Each thread reports its OS and managed ids, liveness, background/finalizer/GC role, GC mode
+(`Cooperative`/`Preemptive`), the decoded `ClrThreadState` flag names, and — if the thread is
+currently throwing — a shallow `currentException` (`{ address, type, message }`). `lockCount` is
+`null` when the runtime doesn't track it for that thread.
+
 ## Heap queries
 
 Heap queries build a one-time immutable snapshot of the managed heap on first use, then serve
@@ -269,6 +303,43 @@ scry dumparray --address 0x7f9a00005678 --limit 10
 Walk an array's elements by address, paged (similar to SOS `!DumpArray`). Like `dumpheap`, it
 returns element values truncated to a maximum length and quoted. Returns `{ "found": false }` if
 the address is not a valid array. Use `--limit` and `--offset` for pagination.
+
+### GC roots (why an object is alive)
+
+```bash
+scry gcroot --address 0x14b0dc00208            # first root path
+scry gcroot --address 0x14b0dc00208 --max-paths 5
+```
+
+```json
+{
+  "found": true,
+  "target": "0x14b0dc00208",
+  "rooted": true,
+  "truncated": true,
+  "roots": [
+    {
+      "rootKind": "StrongHandle",
+      "rootAddress": "0x14b098513e8",
+      "stackFrame": null,
+      "chain": [
+        { "address": "0x14b0b400028", "type": "System.Object[]" },
+        { "address": "0x14b0dc00208", "type": "System.Collections.Generic.Dictionary<System.String, System.Object>" }
+      ]
+    }
+  ]
+}
+```
+
+Finds the GC root paths that keep an object alive (similar to SOS `!GCRoot`) — the core "why
+isn't this collected / what's leaking" query. Each path names the `rootKind` (`StrongHandle`,
+`Stack`, `FinalizerQueue`, `PinnedHandle`, …), the root address, the originating `stackFrame`
+(for `Stack` roots), and the `chain` of objects from the root down to the target.
+
+`rooted` is `false` for a live-but-unreferenced object; `{ "found": false }` means the address
+isn't a valid object. This walks a reverse object graph over the whole heap and is the most
+expensive command, so it defaults to **one** path (`--max-paths` raises the cap; `truncated`
+signals more paths exist) and to a longer 120s timeout.
 
 ## Session management
 

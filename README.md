@@ -7,7 +7,8 @@ returns **structured JSON**, not human-readable SOS text, so an agent can chain 
 > **Status: v0.0.1.** A single-binary CLI + daemon with: the session model (`analyze`/`ps`/
 > `health`/`stop`/`kill`), file logging, ClrMD dump loading, managed thread stacks (`stack`), heap
 > analysis (`dumpheap`/`dumpexceptions`/`printexception`), object & array inspection
-> (`dumpobject`/`dumparray`), and tag-driven distribution (global tool + per-RID zips).
+> (`dumpobject`/`dumparray`), thread and root-path triage (`clrthreads`/`gcroot`), and
+> tag-driven distribution (global tool + per-RID zips).
 > See [the roadmap](CLAUDE.md#milestones).
 
 ## How it works
@@ -77,6 +78,9 @@ $SCRY stack
 # Walk a single thread (by OS id):
 $SCRY stack --thread 1234
 
+# Managed threads (state flags, GC mode, lock count, current exception):
+$SCRY clrthreads
+
 # Heap queries (the first heap command warms a one-time in-memory snapshot):
 $SCRY dumpheap                          # heap statistics
 $SCRY dumpheap --type System.String     # objects of a type, paged
@@ -84,6 +88,9 @@ $SCRY dumpexceptions                    # live exceptions
 $SCRY printexception --address 0xCAFEBABE # detail for one exception
 $SCRY dumpobject --address 0xFACADE     # inspect an object's fields
 $SCRY dumparray --address 0xC0FFEE      # walk an array's elements, paged
+
+# Why is an object still alive? Find the GC root paths that retain it:
+$SCRY gcroot --address 0xDECADE         # first root path (--max-paths N for more)
 
 # Query health (no --dump needed — defaults to single active session):
 $SCRY health

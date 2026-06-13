@@ -32,6 +32,11 @@ service Scry {
   rpc DumpObject(DumpObjectRequest) returns (DumpObjectResponse);
   // Dump an array's elements by address, paged (SOS !DumpArray analog).
   rpc DumpArray(DumpArrayRequest) returns (DumpArrayResponse);
+
+  // List managed threads with state, GC mode, lock count, and current exception (SOS !Threads analog).
+  rpc ClrThreads(ClrThreadsRequest) returns (ClrThreadsResponse);
+  // Find GC root paths that keep an object alive (SOS !GCRoot analog).
+  rpc GcRoot(GcRootRequest) returns (GcRootResponse);
 }
 
 message HealthRequest {}
@@ -132,3 +137,36 @@ message DumpArrayResponse {
   repeated ArrayElement elements = 7;
 }
 message ArrayElement { int32 index = 1; string value = 2; }
+
+message ClrThreadsRequest {}
+message ClrThreadsResponse { repeated ThreadInfo threads = 1; }
+message ThreadInfo {
+  uint32 os_thread_id = 1;
+  int32  managed_thread_id = 2;
+  bool   is_alive = 3;
+  bool   is_background = 4;
+  bool   is_finalizer = 5;
+  bool   is_gc = 6;
+  string gc_mode = 7;
+  uint32 lock_count = 8;
+  repeated string state = 9;          // decoded ClrThreadState flag names
+  ExceptionRef current_exception = 10; // null/absent if the thread has none
+}
+// A shallow reference to an exception object (address + type + message).
+message ExceptionRef { uint64 address = 1; string type = 2; string message = 3; }
+
+message GcRootRequest { uint64 address = 1; int32 max_paths = 2; }
+message GcRootResponse {
+  bool   found = 1;      // false → the address is not a valid object
+  uint64 target = 2;
+  bool   rooted = 3;     // true → at least one root path was found
+  bool   truncated = 4;  // more paths exist than max_paths
+  repeated GcRootPath roots = 5;
+}
+message GcRootPath {
+  string root_kind = 1;     // ClrRootKind (Stack, StrongHandle, FinalizerQueue, ...)
+  uint64 root_address = 2;
+  string stack_frame = 3;   // populated for Stack roots; empty otherwise
+  repeated GcRootNode chain = 4;  // root object → ... → target
+}
+message GcRootNode { uint64 address = 1; string type = 2; }

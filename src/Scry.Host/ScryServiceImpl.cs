@@ -260,4 +260,80 @@ public sealed class ScryServiceImpl(
 
         return response;
     }
+
+    public override async Task<ClrThreadsResponse> ClrThreads(ClrThreadsRequest request, ServerCallContext context)
+    {
+        activity.Touch();
+        RequireReady();
+
+        var threads = await worker.RunAsync(new ClrThreadsCommand(), context.CancellationToken);
+
+        var response = new ClrThreadsResponse();
+        foreach (var t in threads)
+        {
+            var proto = new ThreadInfo
+            {
+                OsThreadId = t.OsThreadId,
+                ManagedThreadId = t.ManagedThreadId,
+                IsAlive = t.IsAlive,
+                IsBackground = t.IsBackground,
+                IsFinalizer = t.IsFinalizer,
+                IsGc = t.IsGc,
+                GcMode = t.GcMode,
+                LockCount = t.LockCount,
+            };
+            proto.State.AddRange(t.State);
+            if (t.CurrentException is { } ex)
+            {
+                proto.CurrentException = new ExceptionRef
+                {
+                    Address = ex.Address,
+                    Type = ex.Type,
+                    Message = ex.Message ?? string.Empty,
+                };
+            }
+
+            response.Threads.Add(proto);
+        }
+
+        return response;
+    }
+
+    public override async Task<GcRootResponse> GcRoot(GcRootRequest request, ServerCallContext context)
+    {
+        activity.Touch();
+        RequireReady();
+
+        var result = await worker.RunAsync(
+            new GcRootCommand(request.Address, request.MaxPaths), context.CancellationToken);
+        if (result is null)
+        {
+            return new GcRootResponse { Found = false };
+        }
+
+        var response = new GcRootResponse
+        {
+            Found = true,
+            Target = result.Target,
+            Rooted = result.Rooted,
+            Truncated = result.Truncated,
+        };
+        foreach (var p in result.Roots)
+        {
+            var path = new GcRootPath
+            {
+                RootKind = p.RootKind,
+                RootAddress = p.RootAddress,
+                StackFrame = p.StackFrame ?? string.Empty,
+            };
+            foreach (var n in p.Chain)
+            {
+                path.Chain.Add(new GcRootNode { Address = n.Address, Type = n.Type ?? string.Empty });
+            }
+
+            response.Roots.Add(path);
+        }
+
+        return response;
+    }
 }

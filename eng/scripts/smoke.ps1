@@ -9,8 +9,9 @@
   unit tests (`dotnet test scry.slnx --filter Category=Unit`); it validates the things unit
   tests can't — real ClrMD analysis and the self-spawned host process (ADR 0007).
 
-  Steps: analyze -> ps -> health -> stack -> dumpheap (stat) -> dumpheap --type (paged) ->
-  dumpexceptions -> printexception (found + not-found) -> pipe-hang check -> stop.
+  Steps: analyze -> ps -> health -> stack -> clrthreads -> dumpheap (stat) ->
+  dumpheap --type (paged) -> dumpexceptions -> printexception (found + not-found) ->
+  dumpobject -> dumparray -> gcroot -> pipe-hang check -> stop.
   Exits non-zero if any step fails. Always stops the session and deletes the dump on exit.
 
 .PARAMETER Scry
@@ -94,6 +95,14 @@ try {
         Write-Host "  threads=$($r.threads.Count)"
     }
 
+    Step 'clrthreads (managed thread list)' {
+        $r = Run @('clrthreads') | ConvertFrom-Json
+        if ($r.threads.Count -lt 1) { throw 'no threads' }
+        $t = $r.threads[0]
+        if (-not $t.gcMode) { throw 'no gcMode' }
+        Write-Host "  threads=$($r.threads.Count) first: osId=$($t.osThreadId) gcMode=$($t.gcMode) state=$($t.state -join '|')"
+    }
+
     Step 'dumpheap (stat)' {
         $r = Run @('dumpheap') | ConvertFrom-Json
         if ($r.stats.Count -lt 1) { throw 'no stats' }
@@ -138,6 +147,18 @@ try {
         $r = Run @('dumparray', '--address', $arr[0].address, '--limit', '5') | ConvertFrom-Json
         if (-not $r.found) { throw "expected found:true for an array address" }
         Write-Host "  type=$($r.type) elementType=$($r.elementType) length=$($r.length)"
+    }
+
+    Step 'gcroot (root paths for a live object)' {
+        $r = Run @('gcroot', '--address', $script:strAddr) | ConvertFrom-Json
+        if (-not $r.found) { throw "expected found:true for $($script:strAddr)" }
+        Write-Host "  rooted=$($r.rooted) truncated=$($r.truncated) paths=$($r.roots.Count)"
+        if ($r.rooted -and $r.roots[0].chain.Count -lt 1) { throw 'rooted path has empty chain' }
+    }
+
+    Step 'gcroot (invalid address => found:false)' {
+        $r = Run @('gcroot', '--address', '0xdeadbeef') | ConvertFrom-Json
+        if ($r.found) { throw 'expected found:false for a bogus address' }
     }
 
     Step 'no pipe-hang (dumpheap | Out-String returns promptly)' {

@@ -13,6 +13,8 @@ internal static class AnalysisCommands
         yield return PrintException(verbose);
         yield return DumpObject(verbose);
         yield return DumpArray(verbose);
+        yield return ClrThreads(verbose);
+        yield return GcRoot(verbose);
     }
 
     private static Command Stack(Option<bool> verbose)
@@ -142,6 +144,48 @@ internal static class AnalysisCommands
                 pr.GetValue(address),
                 pr.GetValue(limit),
                 pr.GetValue(offset),
+                pr.GetValue(timeout),
+                c), ct));
+        return cmd;
+    }
+
+    private static Command ClrThreads(Option<bool> verbose)
+    {
+        var handleArg = CliOptions.HandleArg();
+        var handleOption = CliOptions.HandleOption();
+        var timeout = CliOptions.TimeoutOption(10);
+        var cmd = new Command("clrthreads", "List managed threads with state, GC mode, lock count, and current exception.");
+        cmd.Arguments.Add(handleArg);
+        cmd.Options.Add(handleOption);
+        cmd.Options.Add(timeout);
+        cmd.SetAction((pr, ct) => CliRunner.Run(pr, verbose, (commands, c) =>
+            commands.ClrThreadsAsync(
+                CliRunner.Handle(pr, handleArg, handleOption),
+                pr.GetValue(timeout),
+                c), ct));
+        return cmd;
+    }
+
+    private static Command GcRoot(Option<bool> verbose)
+    {
+        var handleOption = CliOptions.HandleOption();
+        var address = CliOptions.AddressOption("Object address to find roots for (hex, e.g. 0xDECADE).");
+        var maxPaths = new Option<int>("--max-paths")
+        {
+            Description = "Max root paths to return (default 1; a full reverse-graph walk is costly).",
+            DefaultValueFactory = _ => 1,
+        };
+        var timeout = CliOptions.TimeoutOption(120, "RPC timeout in seconds (0 = none). gcroot walks the whole heap, so it can be slow.");
+        var cmd = new Command("gcroot", "Find GC root paths keeping an object alive (why it's not collected).");
+        cmd.Options.Add(handleOption);
+        cmd.Options.Add(address);
+        cmd.Options.Add(maxPaths);
+        cmd.Options.Add(timeout);
+        cmd.SetAction((pr, ct) => CliRunner.Run(pr, verbose, (commands, c) =>
+            commands.GcRootAsync(
+                pr.GetValue(handleOption),
+                pr.GetValue(address),
+                pr.GetValue(maxPaths),
                 pr.GetValue(timeout),
                 c), ct));
         return cmd;
