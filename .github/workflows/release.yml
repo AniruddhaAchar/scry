@@ -4,6 +4,7 @@ on:
     tags: ['v*']
 permissions:
   contents: write
+  packages: write
 jobs:
   self-contained-zips:
     strategy:
