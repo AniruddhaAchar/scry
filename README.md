@@ -31,17 +31,26 @@ and [ADR 0007](docs/adr/0007-single-binary-and-distribution.md).
 
 ## Install
 
-### Global tool (requires ASP.NET Core 10 runtime)
+### Self-contained zips (recommended — no runtime, no auth)
+
+Download the archive for your platform from the
+[latest release](https://github.com/AniruddhaAchar/scry/releases/latest)
+(`win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-arm64`), unzip, and run the `scry`
+executable directly. Nothing else to install. (x64 + arm64 dumps; x86 is not supported.)
+
+### Global tool (advanced — requires ASP.NET Core 10 runtime)
+
+The `Scry.Cli` tool is published to **GitHub Packages**, which requires a configured source and a
+GitHub token with `read:packages` to install:
 
 ```bash
-dotnet tool install -g Scry.Cli
+dotnet tool install -g Scry.Cli \
+  --add-source https://nuget.pkg.github.com/AniruddhaAchar/index.json
 scry analyze /path/to/app.dmp
 ```
 
-### Self-contained zips (no runtime required)
-
-Download pre-built per-RID archives from [GitHub Releases](https://github.com/AniruddhaAchar/scry/releases).
-Unzip and run the `scry` executable directly.
+For frictionless `dotnet tool install -g Scry.Cli` (no auth), the tool would need to be on
+NuGet.org — see the roadmap.
 
 ## Quickstart (development)
 
