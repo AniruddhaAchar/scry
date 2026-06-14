@@ -38,19 +38,27 @@ Download the archive for your platform from the
 (`win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-arm64`), unzip, and run the `scry`
 executable directly. Nothing else to install. (x64 + arm64 dumps; x86 is not supported.)
 
-### Global tool (advanced — requires ASP.NET Core 10 runtime)
+### Global tool (requires the ASP.NET Core 10 runtime + a GitHub token)
 
-The `Scry.Cli` tool is published to **GitHub Packages**, which requires a configured source and a
-GitHub token with `read:packages` to install:
+`Scry.Cli` is published to **GitHub Packages**. Installing from it requires a GitHub
+[personal access token](https://github.com/settings/tokens) with the `read:packages` scope —
+GitHub Packages does not allow anonymous NuGet installs, even for public packages. Register the
+authenticated source once, then install:
 
 ```bash
-dotnet tool install -g Scry.Cli \
-  --add-source https://nuget.pkg.github.com/AniruddhaAchar/index.json
+# one-time: add the authenticated source (PAT needs read:packages)
+dotnet nuget add source https://nuget.pkg.github.com/AniruddhaAchar/index.json \
+  --name scry-github --username <your-github-username> \
+  --password <YOUR_GITHUB_PAT> --store-password-in-clear-text
+
+dotnet tool install -g Scry.Cli --add-source scry-github
 scry analyze /path/to/app.dmp
 ```
 
-For frictionless `dotnet tool install -g Scry.Cli` (no auth), the tool would need to be on
-NuGet.org — see the roadmap.
+Update later with `dotnet tool update -g Scry.Cli --add-source scry-github`. (`--store-password-in-clear-text`
+is needed on Linux/macOS, which have no encrypted credential store.) If you'd rather not deal with
+tokens at all, the self-contained zip above needs none — and publishing to NuGet.org (which would
+make `dotnet tool install -g Scry.Cli` work with no source or token) is on the roadmap.
 
 ## Quickstart (development)
 
