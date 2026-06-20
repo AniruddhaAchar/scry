@@ -25,5 +25,8 @@ jobs:
       # prek is our hook runner (a fast pre-commit reimplementation); uvx fetches
       # and runs it without a separate install step.
       - uses: astral-sh/setup-uv@v6
+        with:
+          # No Python dependency files in this repo — skip the (never-hit) cache.
+          enable-cache: false
       - name: Run pre-commit hooks
         run: uvx prek run --all-files
