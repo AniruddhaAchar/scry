@@ -9,7 +9,7 @@
 
     <!-- Single source of truth for the product version: drives every assembly, the
          tool package version, and ScryVersion.Current (read back via reflection). -->
-    <Version>0.1.0</Version>
+    <Version>0.1.1</Version>
 
     <!-- All warnings are errors, comprehensively:
          - TreatWarningsAsErrors promotes compiler, CA analyzer, and NuGet (NU*) warnings.
