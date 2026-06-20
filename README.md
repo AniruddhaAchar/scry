@@ -31,19 +31,31 @@ and [ADR 0007](docs/adr/0007-single-binary-and-distribution.md).
 
 ## Install
 
-### Self-contained zips (recommended — no runtime, no auth)
+### Global tool from NuGet.org (recommended — no token)
+
+`Scry.Cli` is published to [NuGet.org](https://www.nuget.org/packages/Scry.Cli). With the
+**.NET 10 SDK** (or the ASP.NET Core 10 runtime) installed:
+
+```bash
+dotnet tool install -g Scry.Cli
+scry analyze /path/to/app.dmp
+```
+
+Update later with `dotnet tool update -g Scry.Cli`. No source registration and no token needed.
+
+### Self-contained zips (no runtime, no SDK)
 
 Download the archive for your platform from the
 [latest release](https://github.com/AniruddhaAchar/scry/releases/latest)
 (`win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-arm64`), unzip, and run the `scry`
 executable directly. Nothing else to install. (x64 + arm64 dumps; x86 is not supported.)
 
-### Global tool (requires the ASP.NET Core 10 runtime + a GitHub token)
+### Global tool from GitHub Packages (alternative)
 
-`Scry.Cli` is published to **GitHub Packages**. Installing from it requires a GitHub
+`Scry.Cli` is also mirrored to **GitHub Packages**. Installing from there requires a GitHub
 [personal access token](https://github.com/settings/tokens) with the `read:packages` scope —
-GitHub Packages does not allow anonymous NuGet installs, even for public packages. Register the
-authenticated source once, then install:
+GitHub Packages does not allow anonymous NuGet installs, even for public packages. Prefer the
+NuGet.org install above; use this only if you specifically want the GitHub-hosted feed:
 
 ```bash
 # one-time: add the authenticated source (PAT needs read:packages)
@@ -52,13 +64,10 @@ dotnet nuget add source https://nuget.pkg.github.com/AniruddhaAchar/index.json \
   --password <YOUR_GITHUB_PAT> --store-password-in-clear-text
 
 dotnet tool install -g Scry.Cli --add-source scry-github
-scry analyze /path/to/app.dmp
 ```
 
-Update later with `dotnet tool update -g Scry.Cli --add-source scry-github`. (`--store-password-in-clear-text`
-is needed on Linux/macOS, which have no encrypted credential store.) If you'd rather not deal with
-tokens at all, the self-contained zip above needs none — and publishing to NuGet.org (which would
-make `dotnet tool install -g Scry.Cli` work with no source or token) is on the roadmap.
+(`--store-password-in-clear-text` is needed on Linux/macOS, which have no encrypted credential
+store.)
 
 ## Quickstart (development)
 

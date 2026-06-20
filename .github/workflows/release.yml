@@ -33,9 +33,17 @@ jobs:
           files: scry-${{ env.VERSION }}-${{ matrix.rid }}.zip
   tool-package:
     runs-on: ubuntu-latest
+    # The environment is gated by the NuGet.org trusted-publishing policy
+    # (owner aniruddhaachar, repo AniruddhaAchar/scry, workflow release.yml,
+    # environment nuget-release). Add protection rules on this environment
+    # in repo Settings to restrict who/what can publish.
+    environment: nuget-release
     permissions:
       contents: read
       packages: write
+      # Required for NuGet.org trusted publishing: mints a short-lived OIDC
+      # token that NuGet/login exchanges for a temporary API key. No stored key.
+      id-token: write
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-dotnet@v5
@@ -54,4 +62,17 @@ jobs:
           dotnet nuget push "nupkg/*.nupkg"
           --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
           --api-key ${{ secrets.GITHUB_TOKEN }}
+          --skip-duplicate
+      # Exchange the GitHub OIDC token for a short-lived NuGet.org API key via the
+      # trusted-publishing policy. No long-lived secret is stored in the repo.
+      - name: Authenticate to NuGet.org (trusted publishing)
+        uses: NuGet/login@v1
+        id: nuget-login
+        with:
+          user: aniruddhaachar
+      - name: Push to NuGet.org
+        run: >
+          dotnet nuget push "nupkg/*.nupkg"
+          --source "https://api.nuget.org/v3/index.json"
+          --api-key ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
           --skip-duplicate
