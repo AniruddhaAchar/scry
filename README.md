@@ -69,6 +69,20 @@ dotnet tool install -g Scry.Cli --add-source scry-github
 (`--store-password-in-clear-text` is needed on Linux/macOS, which have no encrypted credential
 store.)
 
+## Use the skill in Claude Code (plugin)
+
+scry ships an [agent skill](skills/scry/SKILL.md) — how to drive scry plus a bounded,
+give-up-aware reasoning loop. This repo is a Claude Code plugin marketplace, so you can install it
+directly:
+
+```
+/plugin marketplace add AniruddhaAchar/scry
+/plugin install scry@scry
+```
+
+The skill then triggers automatically on any .NET dump / crash / hang / leak task (or invoke it as
+`/scry:scry-dump-analysis`). Pair it with the `scry` CLI from the install options above.
+
 ## Quickstart (development)
 
 Requires the **.NET 10 SDK**.

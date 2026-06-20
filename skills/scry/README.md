@@ -19,15 +19,25 @@ skills/scry/
 
 ## Using it
 
-**Claude Code** — make the skill discoverable by copying (or symlinking) it into a skills directory:
+**Claude Code (plugin — recommended)** — this repo is a Claude Code plugin marketplace, so you can
+install the skill directly:
+
+```
+/plugin marketplace add AniruddhaAchar/scry
+/plugin install scry@scry
+```
+
+That's it — Claude Code clones the skill into its plugin cache and loads it. The `description`
+frontmatter governs when it triggers (any .NET dump / crash / hang / leak / deadlock task); you can
+also invoke it explicitly as `/scry:scry-dump-analysis`. Refresh later with
+`/plugin marketplace update scry`. (See [the plugin docs](https://code.claude.com/docs/en/plugins).)
+
+**Claude Code (manual copy)** — alternatively, copy (or symlink) the skill into a skills directory:
 
 ```bash
 # project-scoped (this repo), or swap for ~/.claude/skills for personal use
 cp -r skills/scry ./.claude/skills/scry-dump-analysis
 ```
-
-Claude Code reads `SKILL.md`; the `description` frontmatter governs when it triggers (any .NET dump
-/ crash / hang / leak / deadlock analysis task).
 
 **Other systems** — point your agent at `skills/scry/SKILL.md` and let it follow the references.
 The skill assumes `scry` is on `PATH` (or that you pass its path).

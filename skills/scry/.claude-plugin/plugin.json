@@ -1,0 +1,11 @@
+{
+  "name": "scry",
+  "description": "Drive the scry .NET dump analyzer with a bounded, give-up-aware reasoning loop. Diagnose crashes, hangs/deadlocks, async hangs, and memory leaks from a .dmp — or stop and report the dump lacks enough information instead of guessing.",
+  "author": {
+    "name": "Aniruddha Achar"
+  },
+  "homepage": "https://github.com/AniruddhaAchar/scry",
+  "repository": "https://github.com/AniruddhaAchar/scry",
+  "license": "MIT",
+  "keywords": ["dotnet", "dump", "clrmd", "diagnostics", "debugging", "ai-agents", "memory-leak", "deadlock"]
+}

@@ -1,0 +1,19 @@
+{
+  "name": "scry",
+  "owner": {
+    "name": "Aniruddha Achar"
+  },
+  "description": "scry — structured .NET memory-dump analysis for AI agents.",
+  "plugins": [
+    {
+      "name": "scry",
+      "source": "./skills/scry",
+      "description": "Drive the scry .NET dump analyzer with a bounded, give-up-aware reasoning loop (SKILL.md + command reference + per-symptom playbooks).",
+      "homepage": "https://github.com/AniruddhaAchar/scry",
+      "repository": "https://github.com/AniruddhaAchar/scry",
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": ["dotnet", "dump", "clrmd", "diagnostics", "debugging", "ai-agents"]
+    }
+  ]
+}
