@@ -1,0 +1,29 @@
+name: ci
+# Runs the same pre-commit hooks we enforce locally (.pre-commit-config.yaml:
+# dotnet format + unit tests) as the PR gate — no separate pipeline to keep in
+# sync. The main reason it exists is to give Dependabot PRs a green/red check,
+# since those arrive without the local hook ever running.
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  hooks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      # The hooks are `language: system` and shell out to the .NET SDK, so it
+      # must be on PATH before prek runs them.
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      # prek is our hook runner (a fast pre-commit reimplementation); uvx fetches
+      # and runs it without a separate install step.
+      - uses: astral-sh/setup-uv@v6
+      - name: Run pre-commit hooks
+        run: uvx prek run --all-files
