@@ -16,6 +16,7 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/AniruddhaAchar/scry</PackageProjectUrl>
     <RepositoryUrl>https://github.com/AniruddhaAchar/scry</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
     <PackageTags>dump;clrmd;diagnostics;debugging;dotnet-dump;sos;ai-agents;memory-dump</PackageTags>
     <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
   </PropertyGroup>
