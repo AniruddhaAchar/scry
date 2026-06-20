@@ -31,4 +31,9 @@ foreach (var command in AnalysisCommands.Build(verboseOption))
     root.Subcommands.Add(command);
 }
 
+foreach (var command in MetaCommands.Build(verboseOption))
+{
+    root.Subcommands.Add(command);
+}
+
 return await root.Parse(args).InvokeAsync();

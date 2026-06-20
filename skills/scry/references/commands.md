@@ -31,6 +31,7 @@ scry ps                      # list live sessions
 scry health                  # readiness/runtime of the active session
 scry stop                    # graceful shutdown (releases the dump)
 scry kill                    # force-terminate
+scry version                 # scry version + host runtime/os/arch (no session needed)
 ```
 
 `analyze` success:

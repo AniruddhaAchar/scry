@@ -97,6 +97,9 @@ src/Scry.Client/bin/Debug/net10.0/scry analyze /path/to/app.dmp
 # (Development: define a shorthand for your build)
 SCRY=src/Scry.Client/bin/Debug/net10.0/scry
 
+# Print scry's version and host runtime (handy for bug reports):
+$SCRY version
+
 # List live sessions:
 $SCRY ps
 

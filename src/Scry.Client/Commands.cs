@@ -1,9 +1,11 @@
 using System.Diagnostics;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
 using Scry.Contracts;
 using Scry.Contracts.V1;
+using Scry.Core;
 using ScryGrpc = Scry.Contracts.V1.Scry;
 
 namespace Scry.Client;
@@ -192,6 +194,23 @@ internal sealed class ScryCommands(ILogger<ScryCommands> logger)
                 pid = s.Pid,
                 startedUtc = s.StartedUtc,
             }).ToArray(),
+        });
+        return Task.FromResult(0);
+    }
+
+    // -------------------------------------------------------------------------
+    // version
+    // -------------------------------------------------------------------------
+
+    public Task<int> VersionAsync(CancellationToken ct)
+    {
+        logger.LogInformation("version: {Version}", ScryVersion.Current);
+        JsonOut.Write(new
+        {
+            version = ScryVersion.Current,
+            runtime = RuntimeInformation.FrameworkDescription,
+            os = RuntimeInformation.OSDescription,
+            arch = RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant(),
         });
         return Task.FromResult(0);
     }
