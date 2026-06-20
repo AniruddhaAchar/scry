@@ -1,0 +1,44 @@
+# Dependabot version updates. Committing this file to the default branch enables them.
+# Every update is held for a cool-off window (see `cooldown`) so a freshly-published
+# version has time to surface regressions before Dependabot opens a PR.
+version: 2
+updates:
+  # .NET packages. Versions live in Directory.Packages.props (Central Package
+  # Management); Dependabot also refreshes the committed packages.lock.json files.
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "deps"
+    cooldown:
+      # Minimum hold for any update; majors wait longer (more time for the
+      # ecosystem to flush out breaking-change regressions before we see a PR).
+      default-days: 7
+      semver-major-days: 14
+    groups:
+      # Roll minor + patch bumps into a single PR to keep review volume low.
+      # Majors are intentionally excluded so each gets its own reviewable PR.
+      nuget-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Actions referenced by the release workflow (checkout, setup-dotnet,
+  # action-gh-release, NuGet/login).
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns:
+          - "*"
