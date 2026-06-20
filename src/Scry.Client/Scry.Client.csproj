@@ -14,7 +14,16 @@
     <Authors>Aniruddha Achar</Authors>
     <Description>Structured, JSON-emitting .NET memory-dump analyzer for AI agents (ClrMD-based).</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/AniruddhaAchar/scry</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/AniruddhaAchar/scry</RepositoryUrl>
+    <PackageTags>dump;clrmd;diagnostics;debugging;dotnet-dump;sos;ai-agents;memory-dump</PackageTags>
+    <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Rendered on the NuGet.org package page (PackageReadmeFile above). -->
+    <None Include="PACKAGE.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
   <ItemGroup>
     <!-- DI + Logging come from the Microsoft.AspNetCore.App shared framework (host mode
