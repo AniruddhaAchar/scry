@@ -2,16 +2,8 @@
 
 A [ClrMD](https://github.com/microsoft/clrmd)-based .NET memory-dump analyzer **for AI agents**. It
 returns **structured JSON**, not human-readable SOS text, so an agent can chain analysis steps
-(`stat` → list of a type → dump an object → walk roots) without scraping a debugger's console.
-
-> **Status: v0.1.0** — first public release; feedback welcome. A single-binary CLI + daemon with:
-> the session model (`analyze`/`ps`/`health`/`stop`/`kill`), file logging, ClrMD dump loading,
-> managed thread stacks (`stack`), heap analysis (`dumpheap`/`dumpexceptions`/`printexception`),
-> object & array inspection (`dumpobject`/`dumparray`), thread, root-path, and concurrency triage
-> (`clrthreads`/`gcroot`/`syncblk`/`dumpasync`), an [agent skill](skills/scry/SKILL.md) (how to
-> drive scry + a bounded, give-up-aware reasoning loop), and tag-driven distribution
-> (global tool + per-RID zips).
-> See [the roadmap](CLAUDE.md#milestones).
+(`dumpheap` → list a type's objects → `dumpobject` → `gcroot`) without scraping a debugger's
+console. See [the roadmap](CLAUDE.md#milestones) for what's built.
 
 ## How it works
 
@@ -31,7 +23,7 @@ and [ADR 0007](docs/adr/0007-single-binary-and-distribution.md).
 
 ## Install
 
-### Global tool from NuGet.org (recommended — no token)
+### Global tool from NuGet.org (recommended)
 
 `Scry.Cli` is published to [NuGet.org](https://www.nuget.org/packages/Scry.Cli). With the
 **.NET 10 SDK** (or the ASP.NET Core 10 runtime) installed:
@@ -49,25 +41,6 @@ Download the archive for your platform from the
 [latest release](https://github.com/AniruddhaAchar/scry/releases/latest)
 (`win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-arm64`), unzip, and run the `scry`
 executable directly. Nothing else to install. (x64 + arm64 dumps; x86 is not supported.)
-
-### Global tool from GitHub Packages (alternative)
-
-`Scry.Cli` is also mirrored to **GitHub Packages**. Installing from there requires a GitHub
-[personal access token](https://github.com/settings/tokens) with the `read:packages` scope —
-GitHub Packages does not allow anonymous NuGet installs, even for public packages. Prefer the
-NuGet.org install above; use this only if you specifically want the GitHub-hosted feed:
-
-```bash
-# one-time: add the authenticated source (PAT needs read:packages)
-dotnet nuget add source https://nuget.pkg.github.com/AniruddhaAchar/index.json \
-  --name scry-github --username <your-github-username> \
-  --password <YOUR_GITHUB_PAT> --store-password-in-clear-text
-
-dotnet tool install -g Scry.Cli --add-source scry-github
-```
-
-(`--store-password-in-clear-text` is needed on Linux/macOS, which have no encrypted credential
-store.)
 
 ## Use the skill in Claude Code (plugin)
 
