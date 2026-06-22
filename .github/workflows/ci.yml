@@ -1,8 +1,12 @@
 name: ci
 # Runs the same pre-commit hooks we enforce locally (.pre-commit-config.yaml:
 # dotnet format + unit tests) as the PR gate — no separate pipeline to keep in
-# sync. The main reason it exists is to give Dependabot PRs a green/red check,
-# since those arrive without the local hook ever running.
+# sync.
+#
+# Dependabot PRs are handled by dependabot-lockfiles.yml instead: under Central
+# Package Management a bump leaves some packages.lock.json files stale, which
+# would fail this job's restore. That workflow regenerates the lock files and
+# runs these same hooks, so we skip Dependabot here to avoid a misleading red.
 on:
   pull_request:
   push:
@@ -14,6 +18,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   hooks:
+    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6

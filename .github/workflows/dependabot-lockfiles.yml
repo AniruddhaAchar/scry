@@ -1,0 +1,59 @@
+name: dependabot-lockfiles
+# Dependabot updates only ONE packages.lock.json per bump, but under Central
+# Package Management a version change in Directory.Packages.props affects every
+# project that resolves the package. The stale lock files then get rewritten by
+# CI's `dotnet restore`, which dirties the tree and fails the format hook.
+#
+# This workflow regenerates ALL lock files on a Dependabot NuGet PR, commits them
+# back to the PR branch, and then runs the same validation as ci.yml — so the PR
+# lands green with consistent, committed lock files.
+#
+# Why pull_request_target: a Dependabot `pull_request` run gets a read-only token
+# and so cannot push. pull_request_target runs THIS file from the base branch
+# (trusted) and grants a write token. We gate strictly on the dependabot[bot]
+# actor; Dependabot branches live in this repo (not a fork), and Dependabot only
+# proposes published-registry version bumps.
+on:
+  pull_request_target:
+    paths:
+      - 'Directory.Packages.props'
+      - '**/packages.lock.json'
+permissions:
+  contents: write
+concurrency:
+  group: dependabot-lockfiles-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  regenerate-and-validate:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.3
+        with:
+          # Check out the PR branch itself (pull_request_target defaults to base)
+          # with a token that can push the regenerated lock files back to it.
+          ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Regenerate all lock files
+        run: dotnet restore scry.slnx --force-evaluate
+      - name: Commit & push if any lock file changed
+        run: |
+          if git status --porcelain | grep -q 'packages.lock.json'; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add -- '*packages.lock.json'
+            git commit -m 'Regenerate all packages.lock.json files for the dependency bump'
+            git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
+          else
+            echo 'Lock files already consistent — nothing to push.'
+          fi
+      # Validate the exact state that will merge (same hooks as ci.yml). With the
+      # lock files now consistent, the format hook's restore is a no-op.
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: false
+      - name: Run pre-commit hooks
+        run: uvx prek run --all-files
