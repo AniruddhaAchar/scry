@@ -125,7 +125,7 @@
       "scry.contracts": {
         "type": "Project",
         "dependencies": {
-          "Google.Protobuf": "[3.35.0, )",
+          "Google.Protobuf": "[3.35.1, )",
           "Grpc.Core.Api": "[2.80.0, )"
         }
       },
@@ -134,9 +134,9 @@
       },
       "Google.Protobuf": {
         "type": "CentralTransitive",
-        "requested": "[3.35.0, )",
-        "resolved": "3.35.0",
-        "contentHash": "OrUZCUzBXqdSmsQSWp/EPeINjOBcMU+PrZEJegw0aLgOGFHZ9ZI37X/SFrIxo8C9ghKynaKpPr3BVPc4EujWYg=="
+        "requested": "[3.35.1, )",
+        "resolved": "3.35.1",
+        "contentHash": "pxtkuXhR8svkvDTQrYew9GZQt6eWhblz/V/WKUFrQgkHYlQPsumJTeF6ppHRJpe6j9ffukkd5lQULiiKaek4xA=="
       },
       "Grpc.Core.Api": {
         "type": "CentralTransitive",
@@ -155,9 +155,9 @@
       },
       "Grpc.Tools": {
         "type": "CentralTransitive",
-        "requested": "[2.81.0, )",
-        "resolved": "2.81.0",
-        "contentHash": "UsaX2r6YYEeRS2xtgQIlWyOMyr6336LSgFgfwmCnv2xhhHWa/X/qe0P8SWkpL1Y0iiD4SSsOFoNuaT5WIsRaPw=="
+        "requested": "[2.81.1, )",
+        "resolved": "2.81.1",
+        "contentHash": "me0a6Xyk4Apw5kL2q6dOTZW8YvPnRHyirfxNwEoXwnVZmzS32BiUJFBYWrYvteH0KtEY4uugih+Go8OvIeptJg=="
       },
       "Microsoft.Diagnostics.Runtime": {
         "type": "CentralTransitive",
