@@ -52,7 +52,7 @@ jobs:
           fi
       # Validate the exact state that will merge (same hooks as ci.yml). With the
       # lock files now consistent, the format hook's restore is a no-op.
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: false
       - name: Run pre-commit hooks
