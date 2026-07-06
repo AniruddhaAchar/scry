@@ -123,7 +123,7 @@
       "scry.analysis": {
         "type": "Project",
         "dependencies": {
-          "Microsoft.Diagnostics.Runtime": "[4.0.726401, )"
+          "Microsoft.Diagnostics.Runtime": "[4.0.732401, )"
         }
       },
       "scry.contracts": {
@@ -176,9 +176,9 @@
       },
       "Microsoft.Diagnostics.Runtime": {
         "type": "CentralTransitive",
-        "requested": "[4.0.726401, )",
-        "resolved": "4.0.726401",
-        "contentHash": "ZHLhb74fDWUxQWWvIbDRWNMAO/dQS5J1qdVWsrSxcFYf49M63rysOFTfKIsXwLMDS8YBWKWtEa8KXcL0R1JBkw==",
+        "requested": "[4.0.732401, )",
+        "resolved": "4.0.732401",
+        "contentHash": "Yk+yfnIeIT1YW13hchLwkq5QgaflV5zGlaC32lqrz/Ovx21fVrcuOTgirxC22yGZ2J8wfFb65vFSMkGDK1ymgA==",
         "dependencies": {
           "Azure.Identity": "1.21.0",
           "Microsoft.Diagnostics.NETCore.Client": "0.2.661903"
