@@ -28,13 +28,13 @@ jobs:
     if: github.actor == 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6.0.3
+      - uses: actions/checkout@v7.0.0
         with:
           # Check out the PR branch itself (pull_request_target defaults to base)
           # with a token that can push the regenerated lock files back to it.
           ref: ${{ github.event.pull_request.head.ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v5.4.0
         with:
           dotnet-version: '10.0.x'
       - name: Regenerate all lock files
