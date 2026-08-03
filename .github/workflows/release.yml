@@ -12,8 +12,8 @@ jobs:
         rid: [win-x64, win-arm64, linux-x64, linux-arm64, osx-arm64]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6.0.3
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
       - name: Resolve version from tag
@@ -45,8 +45,8 @@ jobs:
       # token that NuGet/login exchanges for a temporary API key. No stored key.
       id-token: write
     steps:
-      - uses: actions/checkout@v6.0.3
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
       - name: Resolve version from tag
