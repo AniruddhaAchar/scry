@@ -60,10 +60,10 @@
       },
       "Grpc.Net.Common": {
         "type": "Transitive",
-        "resolved": "2.80.0",
-        "contentHash": "E2ERsx+9IXlry4yjBl8btx0XMIKzymGNSvX5jmBS/uSwYyYDoKIDcIREyLqFLvd8vcJdcoRlycpvn9YRXutFpQ==",
+        "resolved": "2.83.0",
+        "contentHash": "9w52xxORdIGu4Mm8lff3psMIlarenu+7TC4uIfiiW9AyaHZ6iPE/18gIkG1DD9byGDuhjuhnN9hiviBUAmCuZw==",
         "dependencies": {
-          "Grpc.Core.Api": "2.80.0"
+          "Grpc.Core.Api": "2.83.0"
         }
       },
       "Microsoft.Bcl.AsyncInterfaces": {
@@ -119,14 +119,14 @@
       "scry.analysis": {
         "type": "Project",
         "dependencies": {
-          "Microsoft.Diagnostics.Runtime": "[4.0.726401, )"
+          "Microsoft.Diagnostics.Runtime": "[4.0.732401, )"
         }
       },
       "scry.contracts": {
         "type": "Project",
         "dependencies": {
           "Google.Protobuf": "[3.35.1, )",
-          "Grpc.Core.Api": "[2.80.0, )"
+          "Grpc.Core.Api": "[2.83.0, )"
         }
       },
       "scry.core": {
@@ -140,30 +140,30 @@
       },
       "Grpc.Core.Api": {
         "type": "CentralTransitive",
-        "requested": "[2.80.0, )",
-        "resolved": "2.80.0",
-        "contentHash": "i/8s+MOrYa6n7BmZ5bilcbHk+EMJDQHm2MKLhwGAT+urQqlZ6cpjvSivYvuULjebuX+UKieLYZbLRCmVQxFRkw=="
+        "requested": "[2.83.0, )",
+        "resolved": "2.83.0",
+        "contentHash": "xU8BT2bCw4Ct+/qIFJhhjkDEilKUbBOfp4US7l3Xa3hnlkN9l2LgISCbOw4PFYpW5jJFcK7FUAyWOFIQ94Hiqg=="
       },
       "Grpc.Net.Client": {
         "type": "CentralTransitive",
-        "requested": "[2.80.0, )",
-        "resolved": "2.80.0",
-        "contentHash": "I1Aa24nTRMHqx0pmQfvthFsOpejquDjiJV6092KBqjw6EEr3wA9CMXlrdkoEgHartOiJrpKyZiQRl7n0NVlfBg==",
+        "requested": "[2.83.0, )",
+        "resolved": "2.83.0",
+        "contentHash": "dHYtx7hW4muttsCrWNG4/Ysb1iAIhNPEq28eo7vF166CdXn/RXOr3SGvSreIGIjvmdrADrBNJ2cUeJBto/T0XA==",
         "dependencies": {
-          "Grpc.Net.Common": "2.80.0"
+          "Grpc.Net.Common": "2.83.0"
         }
       },
       "Grpc.Tools": {
         "type": "CentralTransitive",
-        "requested": "[2.81.1, )",
-        "resolved": "2.81.1",
-        "contentHash": "me0a6Xyk4Apw5kL2q6dOTZW8YvPnRHyirfxNwEoXwnVZmzS32BiUJFBYWrYvteH0KtEY4uugih+Go8OvIeptJg=="
+        "requested": "[2.83.0, )",
+        "resolved": "2.83.0",
+        "contentHash": "vK2Go/83W0v2Nn7tTP9fGrX4IjmOa93s3M0SZeFimU1vIIr2wL9yNJlIyK21y85SGm3++JncB8IF751cjoLHuQ=="
       },
       "Microsoft.Diagnostics.Runtime": {
         "type": "CentralTransitive",
-        "requested": "[4.0.726401, )",
-        "resolved": "4.0.726401",
-        "contentHash": "ZHLhb74fDWUxQWWvIbDRWNMAO/dQS5J1qdVWsrSxcFYf49M63rysOFTfKIsXwLMDS8YBWKWtEa8KXcL0R1JBkw==",
+        "requested": "[4.0.732401, )",
+        "resolved": "4.0.732401",
+        "contentHash": "Yk+yfnIeIT1YW13hchLwkq5QgaflV5zGlaC32lqrz/Ovx21fVrcuOTgirxC22yGZ2J8wfFb65vFSMkGDK1ymgA==",
         "dependencies": {
           "Azure.Identity": "1.21.0",
           "Microsoft.Diagnostics.NETCore.Client": "0.2.661903"
