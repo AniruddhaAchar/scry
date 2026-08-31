@@ -4,21 +4,21 @@
     "net10.0": {
       "Google.Protobuf": {
         "type": "Direct",
-        "requested": "[3.35.1, )",
-        "resolved": "3.35.1",
-        "contentHash": "pxtkuXhR8svkvDTQrYew9GZQt6eWhblz/V/WKUFrQgkHYlQPsumJTeF6ppHRJpe6j9ffukkd5lQULiiKaek4xA=="
+        "requested": "[3.36.0, )",
+        "resolved": "3.36.0",
+        "contentHash": "wDPg8sKlmA8we1bqnC9DYKwLog4PNJ4GYTWV9FkzlGvfs3kNCSt2x0Qe31SBOeBPS2JGEZ/lNfil/Bkwx18Ufg=="
       },
       "Grpc.Core.Api": {
         "type": "Direct",
-        "requested": "[2.80.0, )",
-        "resolved": "2.80.0",
-        "contentHash": "i/8s+MOrYa6n7BmZ5bilcbHk+EMJDQHm2MKLhwGAT+urQqlZ6cpjvSivYvuULjebuX+UKieLYZbLRCmVQxFRkw=="
+        "requested": "[2.83.0, )",
+        "resolved": "2.83.0",
+        "contentHash": "xU8BT2bCw4Ct+/qIFJhhjkDEilKUbBOfp4US7l3Xa3hnlkN9l2LgISCbOw4PFYpW5jJFcK7FUAyWOFIQ94Hiqg=="
       },
       "Grpc.Tools": {
         "type": "Direct",
-        "requested": "[2.81.1, )",
-        "resolved": "2.81.1",
-        "contentHash": "me0a6Xyk4Apw5kL2q6dOTZW8YvPnRHyirfxNwEoXwnVZmzS32BiUJFBYWrYvteH0KtEY4uugih+Go8OvIeptJg=="
+        "requested": "[2.83.0, )",
+        "resolved": "2.83.0",
+        "contentHash": "vK2Go/83W0v2Nn7tTP9fGrX4IjmOa93s3M0SZeFimU1vIIr2wL9yNJlIyK21y85SGm3++JncB8IF751cjoLHuQ=="
       }
     }
   }
